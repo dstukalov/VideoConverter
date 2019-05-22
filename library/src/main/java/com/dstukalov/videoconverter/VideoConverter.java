@@ -442,27 +442,39 @@ public class VideoConverter {
     private String createFragmentShader(int srcWidth, int srcHeight, int dstWidth, int dstHeight) {
         final float kernelSizeX = (float) srcWidth / (float) dstWidth;
         final float kernelSizeY = (float) srcHeight / (float) dstHeight;
-        final int kernelRadiusX = (int) Math.ceil(kernelSizeX - .1f) / 2;
-        final int kernelRadiusY = (int) Math.ceil(kernelSizeY - .1f) / 2;
-        Log.i(TAG, "kernel " + kernelSizeX + "x" + kernelSizeY + ", radius-x:" + kernelRadiusX + ", radius-y:" + kernelRadiusY);
-        final float stepX = kernelSizeX / (1 + 2 * kernelRadiusX) * (1f / srcWidth);
-        final float stepY = kernelSizeY / (1 + 2 * kernelRadiusY) * (1f / srcHeight);
-        final float sum = (1 + 2 * kernelRadiusX) * (1 + 2 * kernelRadiusY);
-        String shader =
-                "#extension GL_OES_EGL_image_external : require\n" +
-                        "precision mediump float;\n" +      // highp here doesn't seem to matter
-                        "varying vec2 vTextureCoord;\n" +
-                        "uniform samplerExternalOES sTexture;\n" +
-                        "void main() {\n" +
-                        "    vec3 finalColor = vec3(0.0);\n" +
-                        "    for (int i = -" + kernelRadiusX + "; i <= " + kernelRadiusX + "; ++i) {\n" +
-                        "        for (int j = -" + kernelRadiusY + "; j <= " + kernelRadiusY + "; ++j) {\n" +
-                        "            finalColor += texture2D(sTexture, (vTextureCoord.xy + vec2(float(i)*" + stepX + ", float(j)*" + stepY + "))).rgb;\n" +
-                        "        }\n" +
-                        "    }\n" +
+        Log.i(TAG, "kernel " + kernelSizeX + "x" + kernelSizeY);
+        final String shader;
+        if (kernelSizeX <= 2 && kernelSizeY <= 2) {
+            shader =
+                    "#extension GL_OES_EGL_image_external : require\n" +
+                            "precision mediump float;\n" +      // highp here doesn't seem to matter
+                            "varying vec2 vTextureCoord;\n" +
+                            "uniform samplerExternalOES sTexture;\n" +
+                            "void main() {\n" +
+                            "    gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
+                            "}\n";
+        } else {
+            final int kernelRadiusX = (int) Math.ceil(kernelSizeX - .1f) / 2;
+            final int kernelRadiusY = (int) Math.ceil(kernelSizeY - .1f) / 2;
+            final float stepX = kernelSizeX / (1 + 2 * kernelRadiusX) * (1f / srcWidth);
+            final float stepY = kernelSizeY / (1 + 2 * kernelRadiusY) * (1f / srcHeight);
+            final float sum = (1 + 2 * kernelRadiusX) * (1 + 2 * kernelRadiusY);
+            shader =
+                    "#extension GL_OES_EGL_image_external : require\n" +
+                            "precision mediump float;\n" +      // highp here doesn't seem to matter
+                            "varying vec2 vTextureCoord;\n" +
+                            "uniform samplerExternalOES sTexture;\n" +
+                            "void main() {\n" +
+                            "    vec3 finalColor = vec3(0.0);\n" +
+                            "    for (int i = -" + kernelRadiusX + "; i <= " + kernelRadiusX + "; ++i) {\n" +
+                            "        for (int j = -" + kernelRadiusY + "; j <= " + kernelRadiusY + "; ++j) {\n" +
+                            "            finalColor += texture2D(sTexture, (vTextureCoord.xy + vec2(float(i)*" + stepX + ", float(j)*" + stepY + "))).rgb;\n" +
+                            "        }\n" +
+                            "    }\n" +
 
-                        "    gl_FragColor = vec4(finalColor / " + sum + ", 1.0);\n" +
-                        "}\n";
+                            "    gl_FragColor = vec4(finalColor / " + sum + ", 1.0);\n" +
+                            "}\n";
+        }
         Log.i(TAG, shader);
         return shader;
     }
