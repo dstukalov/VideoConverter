@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Video converter</string>
+    <string name="convert">Convert this video</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="outputFile">Output:</string>
+    <string name="inputFile">Input:</string>
+    <string name="conversion_not_supported">Video conversion is not supported by your phone</string>
+    <string name="conversion_in_progress">Conversion in progress</string>
+    <string name="please_select_video">Please select video</string>
+    <string name="select_video">Select video</string>
+    <string name="reselect">Reselect</string>
+    <string name="bad_video">Not a video</string>
+    <string name="trim_info">%1$s - %2$s (duration %3$s)</string>
+    <string name="input_info">%1$sx%2$s, %3$s, %4$s</string>
+    <string name="output_info">%1$dx%2$d, %3$s, ~%4$s</string>
+    <string name="conversion_failed">Failed to convert</string>
+    <string name="seconds_elapsed">%d sec. elapsed</string>
+    <string name="quality_240p">240p</string>
+    <string name="quality_360p">360p</string>
+    <string name="quality_480p">480p</string>
+    <string name="quality_720p">720p</string>
+    <string name="quality_1080p">1080p</string>
+</resources>

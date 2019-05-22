@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/quality_240p"
+        android:title="@string/quality_240p"/>
+    <item android:id="@+id/quality_360p"
+        android:title="@string/quality_360p"/>
+    <item android:id="@+id/quality_480p"
+        android:title="@string/quality_480p"/>
+    <item android:id="@+id/quality_720p"
+        android:title="@string/quality_720p"/>
+    <item android:id="@+id/quality_1080p"
+        android:title="@string/quality_1080p"/>
+</menu>
