@@ -73,6 +73,7 @@ public class VideoConverter {
     private int mFrameRate = 30; // 30fps
     private int mVideoBitrate = 2000000; // 2Mbps
     private int mAudioBitrate = 128000; // 128Kbps
+    private boolean mStreamable;
 
     private Listener mListener;
     private boolean mCancelled;
@@ -112,11 +113,15 @@ public class VideoConverter {
     }
 
     public void setAudioBitrate(final int audioBitrate) {
-        this.mAudioBitrate = audioBitrate;
+        mAudioBitrate = audioBitrate;
+    }
+
+    public void setStreamable(boolean streamable) {
+        mStreamable = streamable;
     }
 
     public void setListener(final Listener listener) {
-        this.mListener = listener;
+        mListener = listener;
     }
 
     /**
@@ -358,6 +363,15 @@ public class VideoConverter {
         }
         if (exception != null) {
             throw new RuntimeException(exception);
+        } else if (mStreamable) {
+            final File tmpFile = new File(mOutputFile.getAbsolutePath() + ".tmp");
+            JQTFaststart.startFast(mOutputFile, tmpFile);
+            if (!mOutputFile.delete()) {
+                throw new IOException("failed to delete file " + mOutputFile);
+            }
+            if (!tmpFile.renameTo(mOutputFile)) {
+                throw new IOException("failed to rename " + tmpFile + " to " + mOutputFile);
+            }
         }
     }
 

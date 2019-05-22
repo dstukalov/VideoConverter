@@ -569,8 +569,6 @@ public class MainActivity extends AppCompatActivity {
 
         ConversionTask(final File input, final File output, final long timeFrom, final long timeTo, final ConversionParameters conversionParameters) {
 
-            mConverter = new VideoConverter(input, output);
-
             final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
             mediaMetadataRetriever.setDataSource(input.getAbsolutePath());
 
@@ -595,10 +593,12 @@ public class MainActivity extends AppCompatActivity {
             dstHeight = (dstHeight + 7) & ~0xF;
             dstWidth = (dstWidth + 7) & ~0xF;
 
+            mConverter = new VideoConverter(input, output);
             mConverter.setTimeRange(timeFrom, timeTo);
             mConverter.setFrameSize(dstWidth, dstHeight);
             mConverter.setVideoBitrate(conversionParameters.mVideoBitrate);
             mConverter.setAudioBitrate(conversionParameters.mAudioBitrate);
+            mConverter.setStreamable(true);
 
             mConverter.setListener(percent -> {
                 publishProgress(percent);
