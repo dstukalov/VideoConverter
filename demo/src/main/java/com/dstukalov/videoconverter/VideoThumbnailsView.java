@@ -49,9 +49,6 @@ public class VideoThumbnailsView extends View {
     }
 
     public void setVideoFile(final @Nullable String videoFilePath) {
-        if (TextUtils.equals(mVideoFilePath, videoFilePath)) {
-            return;
-        }
         mVideoFilePath = videoFilePath;
         mThumbnails = null;
         if (mThumbnailsTask != null) {
