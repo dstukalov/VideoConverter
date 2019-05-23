@@ -59,6 +59,7 @@ public class VideoConverter {
     // parameters for the video encoder
     private static final String OUTPUT_VIDEO_MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
     private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 10; // 10 seconds between I-frames
+    private static final int OUTPUT_VIDEO_FRAME_RATE = 30; // needed only for MediaFormat.KEY_I_FRAME_INTERVAL to work; the actual frame rate matches the source
 
     // parameters for the audio encoder
     private static final String OUTPUT_AUDIO_MIME_TYPE = "audio/mp4a-latm"; // Advanced Audio Coding
@@ -70,7 +71,6 @@ public class VideoConverter {
     private int mOutputHeight;
     private long mTimeFrom;
     private long mTimeTo;
-    private int mFrameRate = 30; // 30fps
     private int mVideoBitrate = 2000000; // 2Mbps
     private int mAudioBitrate = 128000; // 128Kbps
     private boolean mStreamable;
@@ -94,10 +94,6 @@ public class VideoConverter {
         if (timeFrom >= 0 && timeTo > 0 && timeFrom == timeTo) {
             throw new IllegalArgumentException("mTimeFrom:" + timeFrom + " mTimeTo:" + timeTo);
         }
-    }
-
-    public void setFrameRate(final int frameRate) {
-        this.mFrameRate = frameRate;
     }
 
     public void setFrameSize(int width, int height) {
@@ -189,7 +185,7 @@ public class VideoConverter {
                 // configure() call to throw an unhelpful exception.
                 outputVideoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
                 outputVideoFormat.setInteger(MediaFormat.KEY_BIT_RATE, mVideoBitrate);
-                outputVideoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mFrameRate);
+                outputVideoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, OUTPUT_VIDEO_FRAME_RATE);
                 outputVideoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, OUTPUT_VIDEO_IFRAME_INTERVAL);
                 if (VERBOSE) Log.d(TAG, "video format: " + outputVideoFormat);
 
