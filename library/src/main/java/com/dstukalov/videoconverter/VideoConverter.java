@@ -28,10 +28,13 @@ import android.view.Surface;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.StringDef;
 
 /**
  * Test for the integration of MediaMuxer and MediaCodec's encoder.
@@ -56,8 +59,14 @@ public class VideoConverter {
      */
     private static final int TIMEOUT_USEC = 10000;
 
+    // Describes when the annotation will be discarded
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef({VIDEO_CODEC_H264, VIDEO_CODEC_H265})
+    public @interface VideoCodec {}
+    public static final String VIDEO_CODEC_H264 = "video/avc";
+    public static final String VIDEO_CODEC_H265 = "video/hevc";
+
     // parameters for the video encoder
-    private static final String OUTPUT_VIDEO_MIME_TYPE = "video/avc"; // H.264 Advanced Video Coding
     private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 10; // 10 seconds between I-frames
     private static final int OUTPUT_VIDEO_FRAME_RATE = 30; // needed only for MediaFormat.KEY_I_FRAME_INTERVAL to work; the actual frame rate matches the source
 
@@ -71,6 +80,7 @@ public class VideoConverter {
     private int mOutputHeight;
     private long mTimeFrom;
     private long mTimeTo;
+    private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264; // 2Mbps
     private int mVideoBitrate = 2000000; // 2Mbps
     private int mAudioBitrate = 128000; // 128Kbps
     private boolean mStreamable;
@@ -104,8 +114,15 @@ public class VideoConverter {
         mOutputHeight = height;
     }
 
+    public void setVideoCodec(final @VideoCodec String videoCodec) throws FileNotFoundException {
+        if (selectCodec(videoCodec) == null) {
+            throw new FileNotFoundException();
+        }
+        mVideoCodec = videoCodec;
+    }
+
     public void setVideoBitrate(final int videoBitrate) {
-        this.mVideoBitrate = videoBitrate;
+        mVideoBitrate = videoBitrate;
     }
 
     public void setAudioBitrate(final int audioBitrate) {
@@ -130,10 +147,10 @@ public class VideoConverter {
         // Exception that may be thrown during release.
         Exception exception = null;
 
-        final MediaCodecInfo videoCodecInfo = selectCodec(OUTPUT_VIDEO_MIME_TYPE);
+        final MediaCodecInfo videoCodecInfo = selectCodec(mVideoCodec);
         if (videoCodecInfo == null) {
             // Don't fail CTS if they don't have an AVC codec (not here, anyway).
-            Log.e(TAG, "Unable to find an appropriate codec for " + OUTPUT_VIDEO_MIME_TYPE);
+            Log.e(TAG, "Unable to find an appropriate codec for " + mVideoCodec);
             throw new FileNotFoundException();
         }
         if (VERBOSE) Log.d(TAG, "video found codec: " + videoCodecInfo.getName());
@@ -179,7 +196,7 @@ public class VideoConverter {
                     outputHeightRotated = mOutputHeight;
                 }
 
-                final MediaFormat outputVideoFormat = MediaFormat.createVideoFormat(OUTPUT_VIDEO_MIME_TYPE, outputWidthRotated, outputHeightRotated);
+                final MediaFormat outputVideoFormat = MediaFormat.createVideoFormat(mVideoCodec, outputWidthRotated, outputHeightRotated);
 
                 // Set some properties. Failing to specify some of these can cause the MediaCodec
                 // configure() call to throw an unhelpful exception.
@@ -251,6 +268,10 @@ public class VideoConverter {
                     inputSurface,
                     outputSurface,
                     inputDuration);
+        } catch (BadVideoException e) {
+            Log.e(TAG, "error converting", e);
+            exception = e;
+            throw e;
         } catch (Exception e) {
             Log.e(TAG, "error converting", e);
             exception = e;
