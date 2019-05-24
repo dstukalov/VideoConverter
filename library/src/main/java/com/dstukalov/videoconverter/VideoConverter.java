@@ -667,7 +667,7 @@ public class VideoConverter {
                             0,
                             0,
                             MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                } else if (presentationTime >= mTimeFrom * 1000) {
+                } else {
                     videoDecoder.queueInputBuffer(
                             decoderInputBufferIndex,
                             0,
@@ -710,7 +710,7 @@ public class VideoConverter {
                             0,
                             0,
                             MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                } else if (presentationTime >= mTimeFrom * 1000) {
+                } else {
                     audioDecoder.queueInputBuffer(
                             decoderInputBufferIndex,
                             0,
@@ -758,6 +758,12 @@ public class VideoConverter {
                 if ((videoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
                         != 0) {
                     if (VERBOSE) Log.d(TAG, "video decoder: codec config buffer");
+                    videoDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
+                    break;
+                }
+                if (videoDecoderOutputBufferInfo.presentationTimeUs < mTimeFrom * 1000 &&
+                        (videoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0) {
+                    if (VERBOSE) Log.d(TAG, "video decoder: frame prior to " + videoDecoderOutputBufferInfo.presentationTimeUs);
                     videoDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
                     break;
                 }
@@ -827,6 +833,12 @@ public class VideoConverter {
                 if ((audioDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
                         != 0) {
                     if (VERBOSE) Log.d(TAG, "audio decoder: codec config buffer");
+                    audioDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
+                    break;
+                }
+                if (audioDecoderOutputBufferInfo.presentationTimeUs < mTimeFrom * 1000 &&
+                        (audioDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0) {
+                    if (VERBOSE) Log.d(TAG, "audio decoder: frame prior to " + audioDecoderOutputBufferInfo.presentationTimeUs);
                     audioDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
                     break;
                 }
@@ -903,6 +915,12 @@ public class VideoConverter {
                         videoEncoderOutputBufferInfo, TIMEOUT_USEC);
                 if (encoderOutputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
                     if (VERBOSE) Log.d(TAG, "no video encoder output buffer");
+                    if (videoDecoderDone) {
+                        // on some devices and encoder stops after signalEndOfInputStream
+                        Log.w(TAG, "videoDecoderDone, but didn't get BUFFER_FLAG_END_OF_STREAM");
+                        videoEncodedFrameCount = videoDecodedFrameCount;
+                        videoEncoderDone = true;
+                    }
                     break;
                 }
                 if (encoderOutputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
