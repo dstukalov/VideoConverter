@@ -490,20 +490,24 @@ public class VideoConverter {
             final float stepX = kernelSizeX / (1 + 2 * kernelRadiusX) * (1f / srcWidth);
             final float stepY = kernelSizeY / (1 + 2 * kernelRadiusY) * (1f / srcHeight);
             final float sum = (1 + 2 * kernelRadiusX) * (1 + 2 * kernelRadiusY);
+            StringBuilder colorLoop = new StringBuilder();
+            for (int i = -kernelRadiusX; i <=kernelRadiusX; i++) {
+                for (int j = -kernelRadiusY; j <=kernelRadiusY; j++) {
+                    if (i != 0 || j != 0) {
+                        colorLoop.append("      + texture2D(sTexture, vTextureCoord.xy + vec2(")
+                                .append(i * stepX).append(", ").append(j * stepY).append("))\n");
+                    }
+                }
+            }
             shader =
                     "#extension GL_OES_EGL_image_external : require\n" +
                             "precision mediump float;\n" +      // highp here doesn't seem to matter
                             "varying vec2 vTextureCoord;\n" +
                             "uniform samplerExternalOES sTexture;\n" +
                             "void main() {\n" +
-                            "    vec3 finalColor = vec3(0.0);\n" +
-                            "    for (int i = -" + kernelRadiusX + "; i <= " + kernelRadiusX + "; ++i) {\n" +
-                            "        for (int j = -" + kernelRadiusY + "; j <= " + kernelRadiusY + "; ++j) {\n" +
-                            "            finalColor += texture2D(sTexture, (vTextureCoord.xy + vec2(float(i)*" + stepX + ", float(j)*" + stepY + "))).rgb;\n" +
-                            "        }\n" +
-                            "    }\n" +
-
-                            "    gl_FragColor = vec4(finalColor / " + sum + ", 1.0);\n" +
+                            "    gl_FragColor = (texture2D(sTexture, vTextureCoord)\n" +
+                                    colorLoop.toString() +
+                            "    ) / " + sum + ";\n" +
                             "}\n";
         }
         Log.i(TAG, shader);
