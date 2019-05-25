@@ -349,7 +349,7 @@ public class MainActivity extends AppCompatActivity {
         mTimeFrom = 0;
         mTimeTo = mDuration;
 
-        mInputInfoView.setText(getString(R.string.input_info, width, height,
+        mInputInfoView.setText(getString(R.string.video_info, width, height,
                         DateUtils.formatElapsedTime(mDuration / 1000),
                         Formatter.formatShortFileSize(this, mInputFile.length())));
 
@@ -667,7 +667,7 @@ public class MainActivity extends AppCompatActivity {
 
                 mediaMetadataRetriever.release();
 
-                mOutputInfoView.setText(getString(R.string.input_info, width, height,
+                mOutputInfoView.setText(getString(R.string.video_info, width, height,
                         DateUtils.formatElapsedTime(duration == null ? 0 : (Long.parseLong( duration) / 1000)),
                         Formatter.formatShortFileSize(MainActivity.this, mOutputFile.length())));
 
