@@ -1,4 +1,4 @@
-package com.dstukalov.videoconverter;
+package com.dstukalov.videoconverterdemo;
 
 import android.app.Activity;
 import android.content.ContentResolver;
@@ -25,6 +25,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dstukalov.videoconverter.BadVideoException;
+import com.dstukalov.videoconverter.VideoConverter;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
@@ -44,7 +46,7 @@ import androidx.core.content.FileProvider;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "video-mConverter";
+    private static final String TAG = "video-converter";
 
     private static final int ACTIVITY_REQUEST_CODE_PICK_VIDEO = 239;
 

@@ -88,7 +88,7 @@ public class VideoConverter {
     private Listener mListener;
     private boolean mCancelled;
 
-    interface Listener {
+    public interface Listener {
         boolean onProgress(int percent);
     }
 
@@ -102,7 +102,7 @@ public class VideoConverter {
         mTimeTo = timeTo;
 
         if (timeFrom >= 0 && timeTo > 0 && timeFrom == timeTo) {
-            throw new IllegalArgumentException("mTimeFrom:" + timeFrom + " mTimeTo:" + timeTo);
+            throw new IllegalArgumentException("timeFrom:" + timeFrom + " timeTo:" + timeTo);
         }
     }
 

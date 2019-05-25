@@ -1,4 +1,4 @@
-package com.dstukalov.videoconverter;
+package com.dstukalov.videoconverterdemo;
 
 import android.app.Activity;
 import android.content.Intent;

@@ -16,7 +16,7 @@
         android:textSize="16sp"
         android:visibility="gone" />
 
-    <com.dstukalov.videoconverter.MainLayout
+    <com.dstukalov.videoconverterdemo.MainLayout
         android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -60,15 +60,14 @@
             android:paddingRight="8dp"
             android:paddingTop="4dp" >
 
-            <com.dstukalov.videoconverter.VideoThumbnailsView
+            <com.dstukalov.videoconverterdemo.VideoThumbnailsView
                 android:id="@+id/video_thumbnails"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:paddingLeft="8dp"
                 android:paddingRight="8dp"
                 android:paddingTop="8dp"
-                tools:background="#ff0000">
-            </com.dstukalov.videoconverter.VideoThumbnailsView>
+                tools:background="#ff0000"/>
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -225,6 +224,6 @@
                 android:textColor="#aaaaaa"
                 android:textSize="12sp" />
         </LinearLayout>
-    </com.dstukalov.videoconverter.MainLayout>
+    </com.dstukalov.videoconverterdemo.MainLayout>
 
 </LinearLayout>

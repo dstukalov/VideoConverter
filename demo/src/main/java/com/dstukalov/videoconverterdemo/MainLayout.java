@@ -1,4 +1,4 @@
-package com.dstukalov.videoconverter;
+package com.dstukalov.videoconverterdemo;
 
 import android.annotation.TargetApi;
 import android.content.Context;
