@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -38,6 +37,7 @@ import java.util.Date;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
@@ -275,6 +275,8 @@ public class MainActivity extends AppCompatActivity {
                             mTimeView.setText("");
                             mPreviewThread.requestShowFrame(0);
                             initInputData();
+                        } else {
+                            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
                         }
                     }
                 } else {
@@ -504,7 +506,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private String getFileFromUri(final Uri uri) {
+    private @Nullable String getFileFromUri(final @NonNull Uri uri) {
         String filePath = null;
         ContentResolver cr = getContentResolver();
         if (cr != null) {
@@ -664,7 +666,7 @@ public class MainActivity extends AppCompatActivity {
                 mediaMetadataRetriever.release();
 
                 mOutputInfoView.setText(getString(R.string.input_info, width, height,
-                        DateUtils.formatElapsedTime(Long.parseLong(duration) / 1000),
+                        DateUtils.formatElapsedTime(duration == null ? 0 : (Long.parseLong( duration) / 1000)),
                         Formatter.formatShortFileSize(MainActivity.this, mOutputFile.length())));
 
             } else {
