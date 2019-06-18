@@ -597,12 +597,13 @@ public class MainActivity extends AppCompatActivity {
             dstHeight = (dstHeight + 7) & ~0xF;
             dstWidth = (dstWidth + 7) & ~0xF;
 
-            mConverter = new VideoConverter(input, output);
+            mConverter = new VideoConverter();
+            mConverter.setInput(input);
+            mConverter.setOutput(output);
             mConverter.setTimeRange(timeFrom, timeTo);
             mConverter.setFrameSize(dstWidth, dstHeight);
             mConverter.setVideoBitrate(conversionParameters.mVideoBitrate);
             mConverter.setAudioBitrate(conversionParameters.mAudioBitrate);
-            mConverter.setStreamable(true);
 
             mConverter.setListener(percent -> {
                 publishProgress(percent);
