@@ -5,6 +5,7 @@ import android.util.Log;
 import org.mp4parser.Box;
 import org.mp4parser.boxes.iso14496.part12.ChunkOffsetBox;
 import org.mp4parser.boxes.iso14496.part12.CompositionTimeToSample;
+import org.mp4parser.boxes.iso14496.part12.FileTypeBox;
 import org.mp4parser.boxes.iso14496.part12.MediaHeaderBox;
 import org.mp4parser.boxes.iso14496.part12.MovieBox;
 import org.mp4parser.boxes.iso14496.part12.MovieHeaderBox;
@@ -14,6 +15,7 @@ import org.mp4parser.boxes.iso14496.part12.SampleToChunkBox;
 import org.mp4parser.boxes.iso14496.part12.SyncSampleBox;
 import org.mp4parser.boxes.iso14496.part12.TimeToSampleBox;
 import org.mp4parser.boxes.iso14496.part12.TrackBox;
+import org.mp4parser.boxes.iso14496.part12.TrackHeaderBox;
 import org.mp4parser.streaming.StreamingSample;
 import org.mp4parser.streaming.StreamingTrack;
 import org.mp4parser.streaming.extensions.CompositionTimeSampleExtension;
@@ -136,10 +138,23 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
     protected Box createMoov() {
         MovieBox movieBox = new MovieBox();
 
-        movieBox.addBox(createMvhd());
+        MovieHeaderBox mvhd = createMvhd();
+        movieBox.addBox(mvhd);
 
+        // update durations
         for (StreamingTrack streamingTrack : source) {
-            movieBox.addBox(trackBoxes.get(streamingTrack));
+            TrackBox tb = trackBoxes.get(streamingTrack);
+            MediaHeaderBox mdhd = Path.getPath(tb, "mdia[0]/mdhd[0]");
+            mdhd.setCreationTime(creationTime);
+            mdhd.setModificationTime(creationTime);
+            mdhd.setDuration(nextSampleStartTime.get(streamingTrack));
+            mdhd.setTimescale(streamingTrack.getTimescale());
+            mdhd.setLanguage(streamingTrack.getLanguage());
+            movieBox.addBox(tb);
+
+            TrackHeaderBox tkhd = Path.getPath(tb, "tkhd[0]");
+            double duration = (double) nextSampleStartTime.get(streamingTrack) / streamingTrack.getTimescale();
+            tkhd.setDuration((long)(mvhd.getTimescale() * duration));
         }
 
         // metadata here
@@ -156,15 +171,9 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
                 return (int) d;
             }
         });
-
-        int i = 0;
-        for (StreamingTrack streamingTrack : source) {
-            Log.d(TAG, "sort " + i + " " + streamingTrack.getHandler() + " track ts is " + (double) nextChunkWriteStartTime.get(streamingTrack) / streamingTrack.getTimescale());
-            i++;
-        }
     }
 
-    protected Box createMvhd() {
+    protected MovieHeaderBox createMvhd() {
         MovieHeaderBox mvhd = new MovieHeaderBox();
         mvhd.setVersion(1);
         mvhd.setCreationTime(creationTime);
@@ -242,7 +251,10 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
                     allTracksAtLeastOneSample &= (nextSampleStartTime.get(track) > 0 || track == streamingTrack);
                 }
                 if (allTracksAtLeastOneSample) {
-                    write(sink, createFtyp());
+                    List<String> minorBrands = new LinkedList<String>();
+                    minorBrands.add("isom");
+                    minorBrands.add("mp42");
+                    write(sink, new FileTypeBox("mp42", 0, minorBrands));
                     headerWritten = true;
                 }
             }
@@ -391,7 +403,7 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
         MediaHeaderBox mdhd = new MediaHeaderBox();
         mdhd.setCreationTime(creationTime);
         mdhd.setModificationTime(creationTime);
-        mdhd.setDuration(nextSampleStartTime.get(streamingTrack));
+        //mdhd.setDuration(nextSampleStartTime.get(streamingTrack)); will update at the end, in createMoov
         mdhd.setTimescale(streamingTrack.getTimescale());
         mdhd.setLanguage(streamingTrack.getLanguage());
         return mdhd;
