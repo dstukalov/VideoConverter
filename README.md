@@ -13,7 +13,7 @@ VideoConverter is installed by adding the following dependency to your build.gra
     mConverter.setInput(context, uri);
     mConverter.setOutput(outputStream);
     mConverter.setTimeRange(timeFrom, timeTo);
-    mConverter.setFrameSize(dstWidth, dstHeight);
+    mConverter.setVideoResolution(360);
     mConverter.setVideoBitrate(2000000);
     mConverter.setAudioBitrate(128000);
     mConverter.setStreamable(true);
