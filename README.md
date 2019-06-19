@@ -9,7 +9,9 @@ VideoConverter is installed by adding the following dependency to your build.gra
     }
 
 ## Usage
-    mConverter = new VideoConverter(input, output);
+    mConverter = new VideoConverter();
+    mConverter.setInput(context, uri);
+    mConverter.setOutput(outputStream);
     mConverter.setTimeRange(timeFrom, timeTo);
     mConverter.setFrameSize(dstWidth, dstHeight);
     mConverter.setVideoBitrate(2000000);
