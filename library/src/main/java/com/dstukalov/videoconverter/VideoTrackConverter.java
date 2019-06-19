@@ -65,8 +65,7 @@ class VideoTrackConverter {
             final @NonNull Converter.Input input,
             final long timeFrom,
             final long timeTo,
-            final int outputWidth,
-            final int outputHeight,
+            final int videoResolution,
             final int videoBitrate,
             final @NonNull String videoCodec) throws IOException {
 
@@ -76,7 +75,7 @@ class VideoTrackConverter {
             videoExtractor.release();
             return null;
         }
-        return new VideoTrackConverter(videoExtractor, videoInputTrack, timeFrom, timeTo, outputWidth, outputHeight, videoBitrate, videoCodec);
+        return new VideoTrackConverter(videoExtractor, videoInputTrack, timeFrom, timeTo, videoResolution, videoBitrate, videoCodec);
     }
 
     private VideoTrackConverter(
@@ -84,8 +83,7 @@ class VideoTrackConverter {
             final int videoInputTrack,
             final long timeFrom,
             final long timeTo,
-            final int outputWidth,
-            final int outputHeight,
+            final int videoResolution,
             final int videoBitrate,
             final @NonNull String videoCodec) throws IOException {
 
@@ -107,6 +105,20 @@ class VideoTrackConverter {
         mInputDuration = inputVideoFormat.containsKey(MediaFormat.KEY_DURATION) ? inputVideoFormat.getLong(MediaFormat.KEY_DURATION) : 0;
 
         final int rotation = inputVideoFormat.containsKey(MediaFormat.KEY_ROTATION) ? inputVideoFormat.getInteger(MediaFormat.KEY_ROTATION) : 0;
+        final int width = inputVideoFormat.getInteger(MediaFormat.KEY_WIDTH);
+        final int height = inputVideoFormat.getInteger(MediaFormat.KEY_HEIGHT);
+        int outputWidth = width;
+        int outputHeight = height;
+        if (outputWidth < outputHeight) {
+            outputWidth = videoResolution;
+            outputHeight = height * outputWidth / width;
+        } else {
+            outputHeight = videoResolution;
+            outputWidth = width * outputHeight / height;
+        }
+        // many encoders do not work when height and width are not multiple of 16 (also, some iPhones do not play some heights)
+        outputHeight = (outputHeight + 7) & ~0xF;
+        outputWidth = (outputWidth + 7) & ~0xF;
 
         final int outputWidthRotated;
         final int outputHeightRotated;

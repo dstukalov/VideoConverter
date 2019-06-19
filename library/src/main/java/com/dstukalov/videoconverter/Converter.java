@@ -52,12 +52,11 @@ public class Converter {
     private Input mInput;
     private Output mOutput;
 
-    private int mOutputWidth;
-    private int mOutputHeight;
     private long mTimeFrom;
     private long mTimeTo;
-    private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264; // 2Mbps
+    private int mVideoResolution;
     private int mVideoBitrate = 2000000; // 2Mbps
+    private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264; // 2Mbps
     private int mAudioBitrate = 128000; // 128Kbps
 
     private Listener mListener;
@@ -70,19 +69,26 @@ public class Converter {
     public Converter() {
     }
 
+    @SuppressWarnings("unused")
     public void setInput(final @NonNull File file) {
         mInput = new FileInput(file);
     }
 
+    @SuppressWarnings("unused")
     public void setInput(final @NonNull Context context, final @NonNull Uri uri) {
         mInput = new UriInput(context, uri);
     }
 
+    @SuppressWarnings("unused")
     public void setOutput(final @NonNull File file) {
         mOutput = new FileOutput(file);
     }
 
+    @SuppressWarnings("unused")
     public void setOutput(final @NonNull OutputStream outputStream) {
+        if (mVideoCodec.equals(VIDEO_CODEC_H265)) {
+            throw new IllegalArgumentException("h265 + out stream is currently not supported");
+        }
         mOutput = new StreamOutput(outputStream);
     }
 
@@ -95,15 +101,14 @@ public class Converter {
         }
     }
 
-    public void setFrameSize(int width, int height) {
-        if ((width % 16) != 0 || (height % 16) != 0) {
-            Log.w(TAG, "WARNING: width or height not multiple of 16");
-        }
-        mOutputWidth = width;
-        mOutputHeight = height;
+    public void setVideoResolution(int videoResolution) {
+        mVideoResolution = videoResolution;
     }
 
     public void setVideoCodec(final @VideoCodec String videoCodec) throws FileNotFoundException {
+        if (mOutput instanceof StreamOutput) {
+            throw new IllegalArgumentException("h265 + out stream is currently not supported");
+        }
         if (selectCodec(videoCodec) == null) {
             throw new FileNotFoundException();
         }
@@ -130,7 +135,7 @@ public class Converter {
         AudioTrackConverter audioTrackConverter = null;
 
         try {
-            videoTrackConverter = VideoTrackConverter.create(mInput, mTimeFrom, mTimeTo, mOutputWidth, mOutputHeight, mVideoBitrate, mVideoCodec);
+            videoTrackConverter = VideoTrackConverter.create(mInput, mTimeFrom, mTimeTo, mVideoResolution, mVideoBitrate, mVideoCodec);
             audioTrackConverter = AudioTrackConverter.create(mInput, mTimeFrom, mTimeTo, mAudioBitrate);
 
             if (videoTrackConverter == null && audioTrackConverter == null) {

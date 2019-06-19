@@ -26,7 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dstukalov.videoconverter.BadVideoException;
-import com.dstukalov.videoconverter.VideoConverter;
+import com.dstukalov.videoconverter.Converter;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
@@ -568,40 +568,16 @@ public class MainActivity extends AppCompatActivity {
 
     private class ConversionTask extends AsyncTask<Void, Integer, Boolean> {
 
-        final VideoConverter mConverter;
+        final Converter mConverter;
         long mStartTime;
 
         ConversionTask(final File input, final File output, final long timeFrom, final long timeTo, final ConversionParameters conversionParameters) {
 
-            final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-            mediaMetadataRetriever.setDataSource(input.getAbsolutePath());
-
-            final int srcWidth = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
-            final int srcHeight = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
-            mediaMetadataRetriever.release();
-
-            int dstWidth = srcWidth;
-            int dstHeight = srcHeight;
-            if (dstWidth < dstHeight) {
-                if (dstWidth > conversionParameters.mVideoResolution) {
-                    dstWidth = conversionParameters.mVideoResolution;
-                    dstHeight = srcHeight * dstWidth / srcWidth;
-                }
-            } else {
-                if (dstHeight > conversionParameters.mVideoResolution) {
-                    dstHeight = conversionParameters.mVideoResolution;
-                    dstWidth = srcWidth * dstHeight / srcHeight;
-                }
-            }
-            // many encoders do not work when height and width are not multiple of 16 (also, some iPhones do not play some heights)
-            dstHeight = (dstHeight + 7) & ~0xF;
-            dstWidth = (dstWidth + 7) & ~0xF;
-
-            mConverter = new VideoConverter();
+            mConverter = new Converter();
             mConverter.setInput(input);
             mConverter.setOutput(output);
             mConverter.setTimeRange(timeFrom, timeTo);
-            mConverter.setFrameSize(dstWidth, dstHeight);
+            mConverter.setVideoResolution(conversionParameters.mVideoResolution);
             mConverter.setVideoBitrate(conversionParameters.mVideoBitrate);
             mConverter.setAudioBitrate(conversionParameters.mAudioBitrate);
 
