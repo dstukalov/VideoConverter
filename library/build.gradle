@@ -26,7 +26,7 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.appcompat:appcompat:1.1.0-beta01'
+    implementation 'androidx.annotation:annotation:1.1.0'
     implementation 'org.mp4parser:isoparser:1.9.39'
     implementation 'org.mp4parser:streaming:1.9.39'
     testImplementation 'junit:junit:4.12'
@@ -49,6 +49,19 @@ publishing {
             version '1.1'
             artifact(sourceJar)
             artifact("$buildDir/outputs/aar/library-release.aar")
+
+            //generate pom nodes for dependencies
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                configurations.implementation.allDependencies.each { dependency ->
+                    if (dependency.group != null) {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', dependency.group)
+                        dependencyNode.appendNode('artifactId', dependency.name)
+                        dependencyNode.appendNode('version', dependency.version)
+                    }
+                }
+            }
         }
     }
     repositories {
