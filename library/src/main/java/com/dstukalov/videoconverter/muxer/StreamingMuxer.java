@@ -1,7 +1,6 @@
 package com.dstukalov.videoconverter.muxer;
 
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 
 import androidx.annotation.NonNull;
@@ -50,9 +49,9 @@ public class StreamingMuxer implements Muxer {
     public int addTrack(@NonNull MediaFormat format) throws IOException {
 
         final String mime = format.getString(MediaFormat.KEY_MIME);
-        if (mime.startsWith("video/")) {
+        if (mime.startsWith("video/avc")) {
             tracks.put(tracks.size(), new VideoTrack(format));
-        } else if (mime.startsWith("audio/")) {
+        } else if (mime.startsWith("audio/mp4a-latm")) {
             tracks.put(tracks.size(), new AudioTrack(format));
         } else {
             throw new IllegalArgumentException("unknown track format");
@@ -112,7 +111,7 @@ public class StreamingMuxer implements Muxer {
         AudioTrack(@NonNull MediaFormat format) {
             super(format.getInteger(MediaFormat.KEY_BIT_RATE), format.getInteger(MediaFormat.KEY_BIT_RATE),
                     format.getInteger(MediaFormat.KEY_SAMPLE_RATE), format.getInteger(MediaFormat.KEY_CHANNEL_COUNT),
-                    format.containsKey(MediaFormat.KEY_PROFILE) ? format.getInteger(MediaFormat.KEY_PROFILE) : MediaCodecInfo.CodecProfileLevel.AACObjectLC);
+                    format.getInteger(MediaFormat.KEY_AAC_PROFILE));
         }
 
         @Override

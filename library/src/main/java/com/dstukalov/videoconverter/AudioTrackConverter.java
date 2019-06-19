@@ -27,6 +27,7 @@ class AudioTrackConverter {
 
     private final long mTimeFrom;
     private final long mTimeTo;
+    private final int mAudioBitrate;
 
     long mInputDuration;
 
@@ -83,6 +84,7 @@ class AudioTrackConverter {
         mTimeFrom = timeFrom;
         mTimeTo = timeTo;
         mAudioExtractor = audioExtractor;
+        mAudioBitrate = audioBitrate;
 
         final MediaCodecInfo audioCodecInfo = Converter.selectCodec(OUTPUT_AUDIO_MIME_TYPE);
         if (audioCodecInfo == null) {
@@ -126,6 +128,12 @@ class AudioTrackConverter {
         mMuxer = muxer;
         if (mEncoderOutputAudioFormat != null) {
             Log.d(TAG, "muxer: adding audio track.");
+            if (!mEncoderOutputAudioFormat.containsKey(MediaFormat.KEY_BIT_RATE)) {
+                mEncoderOutputAudioFormat.setInteger(MediaFormat.KEY_BIT_RATE, mAudioBitrate);
+            }
+            if (!mEncoderOutputAudioFormat.containsKey(MediaFormat.KEY_AAC_PROFILE)) {
+                mEncoderOutputAudioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, OUTPUT_AUDIO_AAC_PROFILE);
+            }
             mOutputAudioTrack = muxer.addTrack(mEncoderOutputAudioFormat);
         }
     }
