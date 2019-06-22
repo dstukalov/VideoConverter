@@ -86,9 +86,6 @@ public class Converter {
 
     @SuppressWarnings("unused")
     public void setOutput(final @NonNull OutputStream outputStream) {
-        if (mVideoCodec.equals(VIDEO_CODEC_H265)) {
-            throw new IllegalArgumentException("h265 + out stream is currently not supported");
-        }
         mOutput = new StreamOutput(outputStream);
     }
 
@@ -106,9 +103,6 @@ public class Converter {
     }
 
     public void setVideoCodec(final @VideoCodec String videoCodec) throws FileNotFoundException {
-        if (mOutput instanceof StreamOutput) {
-            throw new IllegalArgumentException("h265 + out stream is currently not supported");
-        }
         if (selectCodec(videoCodec) == null) {
             throw new FileNotFoundException();
         }

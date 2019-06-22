@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 
 public interface Muxer {
 
-    void start();
+    void start() throws IOException;
 
     void stop() throws IOException;
 

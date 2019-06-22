@@ -29,7 +29,7 @@ public class StreamingMuxer implements Muxer {
     }
 
     @Override
-    public void start() {
+    public void start() throws IOException {
         final List<StreamingTrack> source = new ArrayList<>();
         for (Track track : tracks.values()) {
             source.add((StreamingTrack) track);
@@ -40,7 +40,7 @@ public class StreamingMuxer implements Muxer {
     @Override
     public void stop() throws IOException {
         for (Track track : tracks.values()) {
-            track.close();
+            track.finish();
         }
         mp4Writer.close();
     }
@@ -49,10 +49,12 @@ public class StreamingMuxer implements Muxer {
     public int addTrack(@NonNull MediaFormat format) throws IOException {
 
         final String mime = format.getString(MediaFormat.KEY_MIME);
-        if (mime.startsWith("video/avc")) {
-            tracks.put(tracks.size(), new VideoTrack(format));
-        } else if (mime.startsWith("audio/mp4a-latm")) {
-            tracks.put(tracks.size(), new AudioTrack(format));
+        if (mime.equals("video/avc")) {
+            tracks.put(tracks.size(), new MediaCodecAvcTrack(format));
+        } else if (mime.equals("audio/mp4a-latm")) {
+            tracks.put(tracks.size(), new MediaCodecAacTrack(format));
+        } else if (mime.equals("video/hevc")) {
+            tracks.put(tracks.size(), new MediaCodecHevcTrack(format));
         } else {
             throw new IllegalArgumentException("unknown track format");
         }
@@ -70,12 +72,12 @@ public class StreamingMuxer implements Muxer {
 
     interface Track {
         void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException;
-        void close() throws IOException;
+        void finish() throws IOException;
     }
 
-    static class VideoTrack extends AvcTrack implements Track {
+    static class MediaCodecAvcTrack extends AvcTrack implements Track {
 
-        VideoTrack(@NonNull MediaFormat format) throws IOException {
+        MediaCodecAvcTrack(@NonNull MediaFormat format) throws IOException {
             final ByteBuffer cdsBuffer0 = format.getByteBuffer("csd-0");
             final byte [] cds0 = new byte [cdsBuffer0.capacity() - 4];
             cdsBuffer0.position(4);
@@ -101,14 +103,34 @@ public class StreamingMuxer implements Muxer {
         }
 
         @Override
-        public void close() throws IOException {
+        public void finish() throws IOException {
             consumeLastNal();
         }
     }
 
-    static class AudioTrack extends AacTrack implements Track {
+    static class MediaCodecHevcTrack extends HevcTrack implements Track {
 
-        AudioTrack(@NonNull MediaFormat format) {
+        MediaCodecHevcTrack(@NonNull MediaFormat format) throws IOException {
+            configure(format.getByteBuffer("csd-0"));
+        }
+
+        @Override
+        public void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
+            final byte [] buffer = new byte[bufferInfo.size - 4];
+            byteBuf.position(bufferInfo.offset + 4);
+            byteBuf.get(buffer, 0, bufferInfo.size - 4);
+            consumeNal(ByteBuffer.wrap(buffer), bufferInfo.presentationTimeUs);
+        }
+
+        @Override
+        public void finish() throws IOException {
+            consumeLastNal();
+        }
+    }
+
+    static class MediaCodecAacTrack extends AacTrack implements Track {
+
+        MediaCodecAacTrack(@NonNull MediaFormat format) {
             super(format.getInteger(MediaFormat.KEY_BIT_RATE), format.getInteger(MediaFormat.KEY_BIT_RATE),
                     format.getInteger(MediaFormat.KEY_SAMPLE_RATE), format.getInteger(MediaFormat.KEY_CHANNEL_COUNT),
                     format.getInteger(MediaFormat.KEY_AAC_PROFILE));
@@ -123,7 +145,7 @@ public class StreamingMuxer implements Muxer {
         }
 
         @Override
-        public void close() {
+        public void finish() {
         }
     }
 }
