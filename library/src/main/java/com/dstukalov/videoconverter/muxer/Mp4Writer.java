@@ -55,43 +55,39 @@ import static org.mp4parser.tools.CastUtils.l2i;
 public class Mp4Writer extends DefaultBoxes implements SampleSink {
 
     private static final String TAG = "Mp4Writer";
-    public static final Object OBJ = new Object();
 
-    protected final WritableByteChannel sink;
-    protected List<StreamingTrack> source;
-    protected Date creationTime = new Date();
+    private final WritableByteChannel sink;
+    private List<StreamingTrack> source;
+    private Date creationTime = new Date();
 
 
-    //protected Map<StreamingTrack, CountDownLatch> congestionControl = new ConcurrentHashMap<StreamingTrack, CountDownLatch>();
     /**
      * Contains the start time of the next segment in line that will be created.
      */
-    protected Map<StreamingTrack, Long> nextChunkCreateStartTime = new ConcurrentHashMap<StreamingTrack, Long>();
+    private Map<StreamingTrack, Long> nextChunkCreateStartTime = new ConcurrentHashMap<StreamingTrack, Long>();
     /**
      * Contains the start time of the next segment in line that will be written.
      */
-    protected Map<StreamingTrack, Long> nextChunkWriteStartTime = new ConcurrentHashMap<StreamingTrack, Long>();
+    private Map<StreamingTrack, Long> nextChunkWriteStartTime = new ConcurrentHashMap<StreamingTrack, Long>();
     /**
      * Contains the next sample's start time.
      */
-    protected Map<StreamingTrack, Long> nextSampleStartTime = new HashMap<StreamingTrack, Long>();
+    private Map<StreamingTrack, Long> nextSampleStartTime = new HashMap<StreamingTrack, Long>();
     /**
      * Buffers the samples per track until there are enough samples to form a Segment.
      */
-    protected Map<StreamingTrack, List<StreamingSample>> sampleBuffers = new HashMap<StreamingTrack, List<StreamingSample>>();
-    protected Map<StreamingTrack, TrackBox> trackBoxes = new HashMap<StreamingTrack, TrackBox>();
+    private Map<StreamingTrack, List<StreamingSample>> sampleBuffers = new HashMap<StreamingTrack, List<StreamingSample>>();
+    private Map<StreamingTrack, TrackBox> trackBoxes = new HashMap<StreamingTrack, TrackBox>();
     /**
-     * Buffers segements until it's time for a segment to be written.
+     * Buffers segments until it's time for a segment to be written.
      */
-    protected Map<StreamingTrack, Queue<ChunkContainer>> chunkBuffers = new ConcurrentHashMap<>();
-    protected Map<StreamingTrack, Long> chunkNumbers = new HashMap<>();
-    protected Map<StreamingTrack, Long> sampleNumbers = new HashMap<>();
-    long bytesWritten = 0;
-    volatile boolean headerWritten = false;
+    private Map<StreamingTrack, Queue<ChunkContainer>> chunkBuffers = new ConcurrentHashMap<>();
+    private Map<StreamingTrack, Long> chunkNumbers = new HashMap<>();
+    private Map<StreamingTrack, Long> sampleNumbers = new HashMap<>();
+    private long bytesWritten = 0;
 
-
-    public Mp4Writer(List<StreamingTrack> source, WritableByteChannel sink) {
-        this.source = new ArrayList<StreamingTrack>(source);
+    Mp4Writer(List<StreamingTrack> source, WritableByteChannel sink) throws IOException {
+        this.source = new ArrayList<>(source);
         this.sink = sink;
 
         HashSet<Long> trackIds = new HashSet<Long>();
@@ -125,6 +121,11 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
                 streamingTrack.addTrackExtension(tiExt);
             }
         }
+
+        List<String> minorBrands = new LinkedList<String>();
+        minorBrands.add("isom");
+        minorBrands.add("mp42");
+        write(sink, new FileTypeBox("mp42", 0, minorBrands));
     }
 
     public void close() throws IOException {
@@ -240,37 +241,6 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
             trackBoxes.put(streamingTrack, tb);
         }
 
-        // We might want to do that when the chunk is created to save memory copy
-
-
-        synchronized (OBJ) {
-            // need to synchronized here - I don't want two headers written under any circumstances
-            if (!headerWritten) {
-                boolean allTracksAtLeastOneSample = true;
-                for (StreamingTrack track : source) {
-                    allTracksAtLeastOneSample &= (nextSampleStartTime.get(track) > 0 || track == streamingTrack);
-                }
-                if (allTracksAtLeastOneSample) {
-                    List<String> minorBrands = new LinkedList<String>();
-                    minorBrands.add("isom");
-                    minorBrands.add("mp42");
-                    write(sink, new FileTypeBox("mp42", 0, minorBrands));
-                    headerWritten = true;
-                }
-            }
-        }
-
-        /*
-        try {
-            CountDownLatch cdl = congestionControl.get(streamingTrack);
-            if (cdl.getCount() > 0) {
-                cdl.await();
-            }
-        } catch (InterruptedException e) {
-            // don't care just move on
-        }
-        */
-
         if (isChunkReady(streamingTrack, streamingSample)) {
 
             ChunkContainer chunkContainer = createChunkContainer(streamingTrack);
@@ -279,35 +249,22 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
             nextChunkCreateStartTime.put(streamingTrack, nextChunkCreateStartTime.get(streamingTrack) + chunkContainer.duration);
             Queue<ChunkContainer> chunkQueue = chunkBuffers.get(streamingTrack);
             chunkQueue.add(chunkContainer);
-            synchronized (OBJ) {
-                if (headerWritten && this.source.get(0) == streamingTrack) {
+            if (source.get(0) == streamingTrack) {
 
-                    Queue<ChunkContainer> tracksFragmentQueue;
-                    StreamingTrack currentStreamingTrack;
-                    // This will write AT LEAST the currently created fragment and possibly a few more
-                    while (!(tracksFragmentQueue = chunkBuffers.get((currentStreamingTrack = this.source.get(0)))).isEmpty()) {
-                        ChunkContainer currentFragmentContainer = tracksFragmentQueue.remove();
-                        writeChunkContainer(currentFragmentContainer);
-                        Log.d(TAG, "write chunk " + currentStreamingTrack.getHandler() + ". duration " + (double) currentFragmentContainer.duration / currentStreamingTrack.getTimescale());
-                        //congestionControl.get(currentStreamingTrack).countDown();
-                        long ts = nextChunkWriteStartTime.get(currentStreamingTrack) + currentFragmentContainer.duration;
-                        nextChunkWriteStartTime.put(currentStreamingTrack, ts);
-                        Log.d(TAG, currentStreamingTrack.getHandler() + " track advanced to " + (double) ts / currentStreamingTrack.getTimescale());
-                        sortTracks();
-                    }
-                } else {
-                    Log.d(TAG, streamingTrack.getHandler() + " track delayed, queue size is " + chunkQueue.size());
-                    if (chunkQueue.size() > 10) {
-                        Log.d(TAG, streamingTrack.getHandler() + " track delayed too much");
-                    }
-                    /*
-                    if (chunkQueue.size() > 10) {
-                        // if there are more than 10 fragments in the queue we don't want more samples of this track
-                        // System.err.println("Stopping " + streamingTrack);
-                        congestionControl.put(streamingTrack, new CountDownLatch(chunkQueue.size()));
-                    }
-                    */
+                Queue<ChunkContainer> tracksFragmentQueue;
+                StreamingTrack currentStreamingTrack;
+                // This will write AT LEAST the currently created fragment and possibly a few more
+                while (!(tracksFragmentQueue = chunkBuffers.get((currentStreamingTrack = this.source.get(0)))).isEmpty()) {
+                    ChunkContainer currentFragmentContainer = tracksFragmentQueue.remove();
+                    writeChunkContainer(currentFragmentContainer);
+                    Log.d(TAG, "write chunk " + currentStreamingTrack.getHandler() + ". duration " + (double) currentFragmentContainer.duration / currentStreamingTrack.getTimescale());
+                    long ts = nextChunkWriteStartTime.get(currentStreamingTrack) + currentFragmentContainer.duration;
+                    nextChunkWriteStartTime.put(currentStreamingTrack, ts);
+                    Log.d(TAG, currentStreamingTrack.getHandler() + " track advanced to " + (double) ts / currentStreamingTrack.getTimescale());
+                    sortTracks();
                 }
+            } else {
+                Log.d(TAG, streamingTrack.getHandler() + " track delayed, queue size is " + chunkQueue.size());
             }
         }
 
@@ -413,7 +370,7 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
         ArrayList<StreamingSample> samples;
         long size;
 
-        public Mdat(List<StreamingSample> samples) {
+        Mdat(List<StreamingSample> samples) {
             this.samples = new ArrayList<StreamingSample>(samples);
             size = 8;
             for (StreamingSample sample : samples) {
@@ -441,8 +398,6 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
             for (StreamingSample sample : samples) {
                 writableByteChannel.write((ByteBuffer) sample.getContent().rewind());
             }
-
-
         }
     }
 
