@@ -62,7 +62,7 @@ class VideoTrackConverter {
     private Muxer mMuxer;
 
     static @Nullable VideoTrackConverter create(
-            final @NonNull Converter.Input input,
+            final @NonNull MediaConverter.Input input,
             final long timeFrom,
             final long timeTo,
             final int videoResolution,
@@ -91,7 +91,7 @@ class VideoTrackConverter {
         mTimeTo = timeTo;
         mVideoExtractor = videoExtractor;
 
-        final MediaCodecInfo videoCodecInfo = Converter.selectCodec(videoCodec);
+        final MediaCodecInfo videoCodecInfo = MediaConverter.selectCodec(videoCodec);
         if (videoCodecInfo == null) {
             // Don't fail CTS if they don't have an AVC codec (not here, anyway).
             Log.e(TAG, "Unable to find an appropriate codec for " + videoCodec);
@@ -481,7 +481,7 @@ class VideoTrackConverter {
      * @param surface     into which to decode the frames
      */
     private @NonNull MediaCodec createVideoDecoder(@NonNull MediaFormat inputFormat, @NonNull Surface surface) throws IOException {
-        MediaCodec decoder = MediaCodec.createDecoderByType(Converter.getMimeTypeFor(inputFormat));
+        MediaCodec decoder = MediaCodec.createDecoderByType(MediaConverter.getMimeTypeFor(inputFormat));
         decoder.configure(inputFormat, surface, null, 0);
         decoder.start();
         return decoder;
@@ -512,7 +512,7 @@ class VideoTrackConverter {
     private static int getAndSelectVideoTrackIndex(@NonNull MediaExtractor extractor) {
         for (int index = 0; index < extractor.getTrackCount(); ++index) {
             if (VERBOSE) {
-                Log.d(TAG, "format for track " + index + " is " + Converter.getMimeTypeFor(extractor.getTrackFormat(index)));
+                Log.d(TAG, "format for track " + index + " is " + MediaConverter.getMimeTypeFor(extractor.getTrackFormat(index)));
             }
             if (isVideoFormat(extractor.getTrackFormat(index))) {
                 extractor.selectTrack(index);
@@ -523,6 +523,6 @@ class VideoTrackConverter {
     }
 
     private static boolean isVideoFormat(MediaFormat format) {
-        return Converter.getMimeTypeFor(format).startsWith("video/");
+        return MediaConverter.getMimeTypeFor(format).startsWith("video/");
     }
 }

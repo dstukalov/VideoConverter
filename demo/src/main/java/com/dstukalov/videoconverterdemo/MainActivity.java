@@ -26,7 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dstukalov.videoconverter.BadVideoException;
-import com.dstukalov.videoconverter.Converter;
+import com.dstukalov.videoconverter.MediaConverter;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
@@ -568,12 +568,12 @@ public class MainActivity extends AppCompatActivity {
 
     private class ConversionTask extends AsyncTask<Void, Integer, Boolean> {
 
-        final Converter mConverter;
+        final MediaConverter mConverter;
         long mStartTime;
 
         ConversionTask(final File input, final File output, final long timeFrom, final long timeTo, final ConversionParameters conversionParameters) {
 
-            mConverter = new Converter();
+            mConverter = new MediaConverter();
             mConverter.setInput(input);
             mConverter.setOutput(output);
             mConverter.setTimeRange(timeFrom, timeTo);

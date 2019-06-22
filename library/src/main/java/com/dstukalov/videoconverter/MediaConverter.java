@@ -39,7 +39,7 @@ import androidx.annotation.WorkerThread;
 import com.dstukalov.videoconverter.muxer.StreamingMuxer;
 
 @SuppressWarnings("WeakerAccess")
-public class Converter {
+public class MediaConverter {
     private static final String TAG = "video-converter";
     private static final boolean VERBOSE = false; // lots of logging
 
@@ -67,7 +67,7 @@ public class Converter {
         boolean onProgress(int percent);
     }
 
-    public Converter() {
+    public MediaConverter() {
     }
 
     @SuppressWarnings("unused")

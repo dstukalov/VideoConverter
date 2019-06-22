@@ -11,17 +11,17 @@ VideoConverter is installed by adding the following dependency to your build.gra
     }
 
 ## Usage
-    mConverter = new Converter();
-    mConverter.setInput(context, uri);
-    mConverter.setOutput(outputStream);
-    mConverter.setTimeRange(timeFrom, timeTo);
-    mConverter.setVideoResolution(360);
-    mConverter.setVideoBitrate(2000000);
-    mConverter.setAudioBitrate(128000);
+    MediaConverter converter = new MediaConverter();
+    converter.setInput(context, uri);
+    converter.setOutput(outputStream);
+    converter.setTimeRange(timeFrom, timeTo);
+    converter.setVideoResolution(360);
+    converter.setVideoBitrate(2000000);
+    converter.setAudioBitrate(128000);
 
-    mConverter.setListener(percent -> {
+    converter.setListener(percent -> {
         publishProgress(percent);
         return isCancelled();
     });
 
-    mConverter.convert();
+    converter.convert();

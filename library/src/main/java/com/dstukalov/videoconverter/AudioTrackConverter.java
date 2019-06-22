@@ -60,7 +60,7 @@ class AudioTrackConverter {
     private Muxer mMuxer;
 
     static @Nullable AudioTrackConverter create(
-            final @NonNull Converter.Input input,
+            final @NonNull MediaConverter.Input input,
             final long timeFrom,
             final long timeTo,
             final int audioBitrate) throws IOException {
@@ -86,7 +86,7 @@ class AudioTrackConverter {
         mAudioExtractor = audioExtractor;
         mAudioBitrate = audioBitrate;
 
-        final MediaCodecInfo audioCodecInfo = Converter.selectCodec(OUTPUT_AUDIO_MIME_TYPE);
+        final MediaCodecInfo audioCodecInfo = MediaConverter.selectCodec(OUTPUT_AUDIO_MIME_TYPE);
         if (audioCodecInfo == null) {
             // Don't fail CTS if they don't have an AAC codec (not here, anyway).
             Log.e(TAG, "Unable to find an appropriate codec for " + OUTPUT_AUDIO_MIME_TYPE);
@@ -412,7 +412,7 @@ class AudioTrackConverter {
      * @param inputFormat the format of the stream to decode
      */
     private static @NonNull MediaCodec createAudioDecoder(@NonNull MediaFormat inputFormat) throws IOException {
-        MediaCodec decoder = MediaCodec.createDecoderByType(Converter.getMimeTypeFor(inputFormat));
+        MediaCodec decoder = MediaCodec.createDecoderByType(MediaConverter.getMimeTypeFor(inputFormat));
         decoder.configure(inputFormat, null, null, 0);
         decoder.start();
         return decoder;
@@ -435,7 +435,7 @@ class AudioTrackConverter {
         for (int index = 0; index < extractor.getTrackCount(); ++index) {
             if (VERBOSE) {
                 Log.d(TAG, "format for track " + index + " is "
-                        + Converter.getMimeTypeFor(extractor.getTrackFormat(index)));
+                        + MediaConverter.getMimeTypeFor(extractor.getTrackFormat(index)));
             }
             if (isAudioFormat(extractor.getTrackFormat(index))) {
                 extractor.selectTrack(index);
@@ -446,6 +446,6 @@ class AudioTrackConverter {
     }
 
     private static boolean isAudioFormat(MediaFormat format) {
-        return Converter.getMimeTypeFor(format).startsWith("audio/");
+        return MediaConverter.getMimeTypeFor(format).startsWith("audio/");
     }
 }
