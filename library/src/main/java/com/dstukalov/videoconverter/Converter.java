@@ -34,6 +34,7 @@ import java.lang.annotation.RetentionPolicy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringDef;
+import androidx.annotation.WorkerThread;
 
 import com.dstukalov.videoconverter.muxer.StreamingMuxer;
 
@@ -121,6 +122,7 @@ public class Converter {
         mListener = listener;
     }
 
+    @WorkerThread
     public void convert() throws BadVideoException, IOException {
         // Exception that may be thrown during release.
         Exception exception = null;
