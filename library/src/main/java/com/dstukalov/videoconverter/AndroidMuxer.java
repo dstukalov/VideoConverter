@@ -14,7 +14,7 @@ public class AndroidMuxer implements Muxer {
 
     private MediaMuxer muxer;
 
-    public AndroidMuxer(final @NonNull File file) throws IOException {
+    AndroidMuxer(final @NonNull File file) throws IOException {
         muxer = new MediaMuxer(file.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
     }
 

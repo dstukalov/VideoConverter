@@ -40,7 +40,7 @@ import com.dstukalov.videoconverter.muxer.StreamingMuxer;
 
 @SuppressWarnings("WeakerAccess")
 public class MediaConverter {
-    private static final String TAG = "video-converter";
+    private static final String TAG = "media-converter";
     private static final boolean VERBOSE = false; // lots of logging
 
     // Describes when the annotation will be discarded
@@ -57,7 +57,7 @@ public class MediaConverter {
     private long mTimeTo;
     private int mVideoResolution;
     private int mVideoBitrate = 2000000; // 2Mbps
-    private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264; // 2Mbps
+    private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264;
     private int mAudioBitrate = 128000; // 128Kbps
 
     private Listener mListener;
@@ -90,6 +90,7 @@ public class MediaConverter {
         mOutput = new StreamOutput(outputStream);
     }
 
+    @SuppressWarnings("unused")
     public void setTimeRange(long timeFrom, long timeTo) {
         mTimeFrom = timeFrom;
         mTimeTo = timeTo;
@@ -99,10 +100,12 @@ public class MediaConverter {
         }
     }
 
+    @SuppressWarnings("unused")
     public void setVideoResolution(int videoResolution) {
         mVideoResolution = videoResolution;
     }
 
+    @SuppressWarnings("unused")
     public void setVideoCodec(final @VideoCodec String videoCodec) throws FileNotFoundException {
         if (selectCodec(videoCodec) == null) {
             throw new FileNotFoundException();
@@ -110,14 +113,17 @@ public class MediaConverter {
         mVideoCodec = videoCodec;
     }
 
+    @SuppressWarnings("unused")
     public void setVideoBitrate(final int videoBitrate) {
         mVideoBitrate = videoBitrate;
     }
 
+    @SuppressWarnings("unused")
     public void setAudioBitrate(final int audioBitrate) {
         mAudioBitrate = audioBitrate;
     }
 
+    @SuppressWarnings("unused")
     public void setListener(final Listener listener) {
         mListener = listener;
     }
@@ -277,7 +283,7 @@ public class MediaConverter {
      * Returns the first codec capable of encoding the specified MIME type, or null if no match was
      * found.
      */
-    static MediaCodecInfo selectCodec(String mimeType) {
+    static MediaCodecInfo selectCodec(final String mimeType) {
         final int numCodecs = MediaCodecList.getCodecCount();
         for (int i = 0; i < numCodecs; i++) {
             final MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i);
@@ -310,7 +316,7 @@ public class MediaConverter {
 
         @Override
         public @NonNull MediaExtractor createExtractor() throws IOException {
-            MediaExtractor extractor = new MediaExtractor();
+            final MediaExtractor extractor = new MediaExtractor();
             extractor.setDataSource(file.getAbsolutePath());
             return extractor;
         }
@@ -328,7 +334,7 @@ public class MediaConverter {
 
         @Override
         public @NonNull MediaExtractor createExtractor() throws IOException {
-            MediaExtractor extractor = new MediaExtractor();
+            final MediaExtractor extractor = new MediaExtractor();
             extractor.setDataSource(context, uri, null);
             return extractor;
         }

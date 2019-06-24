@@ -18,10 +18,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 class VideoTrackConverter {
 
-    private static final String TAG = "video-converter";
+    private static final String TAG = "media-converter";
     private static final boolean VERBOSE = false; // lots of logging
 
-    // parameters for the video encoder
     private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 10; // 10 seconds between I-frames
     private static final int OUTPUT_VIDEO_FRAME_RATE = 30; // needed only for MediaFormat.KEY_I_FRAME_INTERVAL to work; the actual frame rate matches the source
 
@@ -40,7 +39,6 @@ class VideoTrackConverter {
     private final OutputSurface mOutputSurface;
 
     private final ByteBuffer[] mVideoDecoderInputBuffers;
-    private ByteBuffer[] mVideoDecoderOutputBuffers;
     private ByteBuffer[] mVideoEncoderOutputBuffers;
     private final MediaCodec.BufferInfo mVideoDecoderOutputBufferInfo;
     private final MediaCodec.BufferInfo mVideoEncoderOutputBufferInfo;
@@ -98,7 +96,6 @@ class VideoTrackConverter {
             throw new FileNotFoundException();
         }
         if (VERBOSE) Log.d(TAG, "video found codec: " + videoCodecInfo.getName());
-
 
         final MediaFormat inputVideoFormat = mVideoExtractor.getTrackFormat(videoInputTrack);
 
@@ -158,7 +155,6 @@ class VideoTrackConverter {
         mVideoDecoder = createVideoDecoder(inputVideoFormat, mOutputSurface.getSurface());
 
         mVideoDecoderInputBuffers = mVideoDecoder.getInputBuffers();
-        mVideoDecoderOutputBuffers = mVideoDecoder.getOutputBuffers();
         mVideoEncoderOutputBuffers = mVideoEncoder.getOutputBuffers();
         mVideoDecoderOutputBufferInfo = new MediaCodec.BufferInfo();
         mVideoEncoderOutputBufferInfo = new MediaCodec.BufferInfo();
@@ -191,9 +187,9 @@ class VideoTrackConverter {
             if (VERBOSE) {
                 Log.d(TAG, "video decoder: returned input buffer: " + decoderInputBufferIndex);
             }
-            ByteBuffer decoderInputBuffer = mVideoDecoderInputBuffers[decoderInputBufferIndex];
-            int size = mVideoExtractor.readSampleData(decoderInputBuffer, 0);
-            long presentationTime = mVideoExtractor.getSampleTime();
+            final ByteBuffer decoderInputBuffer = mVideoDecoderInputBuffers[decoderInputBufferIndex];
+            final int size = mVideoExtractor.readSampleData(decoderInputBuffer, 0);
+            final long presentationTime = mVideoExtractor.getSampleTime();
             if (VERBOSE) {
                 Log.d(TAG, "video extractor: returned buffer of size " + size);
                 Log.d(TAG, "video extractor: returned buffer for time " + presentationTime);
@@ -223,9 +219,8 @@ class VideoTrackConverter {
         }
 
         // Poll output frames from the video decoder and feed the encoder.
-        while (!mVideoDecoderDone
-                && (mEncoderOutputVideoFormat == null || mMuxer != null)) {
-            int decoderOutputBufferIndex =
+        while (!mVideoDecoderDone && (mEncoderOutputVideoFormat == null || mMuxer != null)) {
+            final int decoderOutputBufferIndex =
                     mVideoDecoder.dequeueOutputBuffer(
                             mVideoDecoderOutputBufferInfo, TIMEOUT_USEC);
             if (decoderOutputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
@@ -234,13 +229,11 @@ class VideoTrackConverter {
             }
             if (decoderOutputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 if (VERBOSE) Log.d(TAG, "video decoder: output buffers changed");
-                mVideoDecoderOutputBuffers = mVideoDecoder.getOutputBuffers();
                 break;
             }
             if (decoderOutputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 if (VERBOSE) {
-                    MediaFormat decoderOutputVideoFormat = mVideoDecoder.getOutputFormat();
-                    Log.d(TAG, "video decoder: output format changed: " + decoderOutputVideoFormat);
+                    Log.d(TAG, "video decoder: output format changed: " + mVideoDecoder.getOutputFormat());
                 }
                 break;
             }
@@ -250,24 +243,19 @@ class VideoTrackConverter {
                 Log.d(TAG, "video decoder: returned buffer of size "
                         + mVideoDecoderOutputBufferInfo.size);
             }
-            ByteBuffer decoderOutputBuffer =
-                    mVideoDecoderOutputBuffers[decoderOutputBufferIndex];
-            if ((mVideoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
-                    != 0) {
+            if ((mVideoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                 if (VERBOSE) Log.d(TAG, "video decoder: codec config buffer");
                 mVideoDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
                 break;
             }
             if (mVideoDecoderOutputBufferInfo.presentationTimeUs < mTimeFrom * 1000 &&
                     (mVideoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0) {
-                if (VERBOSE)
-                    Log.d(TAG, "video decoder: frame prior to " + mVideoDecoderOutputBufferInfo.presentationTimeUs);
+                if (VERBOSE) Log.d(TAG, "video decoder: frame prior to " + mVideoDecoderOutputBufferInfo.presentationTimeUs);
                 mVideoDecoder.releaseOutputBuffer(decoderOutputBufferIndex, false);
                 break;
             }
             if (VERBOSE) {
-                Log.d(TAG, "video decoder: returned buffer for time "
-                        + mVideoDecoderOutputBufferInfo.presentationTimeUs);
+                Log.d(TAG, "video decoder: returned buffer for time " + mVideoDecoderOutputBufferInfo.presentationTimeUs);
             }
             boolean render = mVideoDecoderOutputBufferInfo.size != 0;
             mVideoDecoder.releaseOutputBuffer(decoderOutputBufferIndex, render);
@@ -277,14 +265,12 @@ class VideoTrackConverter {
                 // Edit the frame and send it to the encoder.
                 if (VERBOSE) Log.d(TAG, "output surface: draw image");
                 mOutputSurface.drawImage();
-                mInputSurface.setPresentationTime(
-                        mVideoDecoderOutputBufferInfo.presentationTimeUs * 1000);
+                mInputSurface.setPresentationTime(mVideoDecoderOutputBufferInfo.presentationTimeUs * 1000);
                 if (VERBOSE) Log.d(TAG, "input surface: swap buffers");
                 mInputSurface.swapBuffers();
                 if (VERBOSE) Log.d(TAG, "video encoder: notified of new frame");
             }
-            if ((mVideoDecoderOutputBufferInfo.flags
-                    & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+            if ((mVideoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 if (VERBOSE) Log.d(TAG, "video decoder: EOS");
                 mVideoDecoderDone = true;
                 mVideoEncoder.signalEndOfInputStream();
@@ -295,10 +281,8 @@ class VideoTrackConverter {
         }
 
         // Poll frames from the video encoder and send them to the muxer.
-        while (!mVideoEncoderDone
-                && (mEncoderOutputVideoFormat == null || mMuxer != null)) {
-            int encoderOutputBufferIndex = mVideoEncoder.dequeueOutputBuffer(
-                    mVideoEncoderOutputBufferInfo, TIMEOUT_USEC);
+        while (!mVideoEncoderDone && (mEncoderOutputVideoFormat == null || mMuxer != null)) {
+            final int encoderOutputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mVideoEncoderOutputBufferInfo, TIMEOUT_USEC);
             if (encoderOutputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 if (VERBOSE) Log.d(TAG, "no video encoder output buffer");
                 if (mVideoDecoderDone) {
@@ -322,23 +306,18 @@ class VideoTrackConverter {
             }
             Preconditions.checkState("should have added track before processing output", mMuxer != null);
             if (VERBOSE) {
-                Log.d(TAG, "video encoder: returned output buffer: "
-                        + encoderOutputBufferIndex);
-                Log.d(TAG, "video encoder: returned buffer of size "
-                        + mVideoEncoderOutputBufferInfo.size);
+                Log.d(TAG, "video encoder: returned output buffer: " + encoderOutputBufferIndex);
+                Log.d(TAG, "video encoder: returned buffer of size " + mVideoEncoderOutputBufferInfo.size);
             }
-            ByteBuffer encoderOutputBuffer =
-                    mVideoEncoderOutputBuffers[encoderOutputBufferIndex];
-            if ((mVideoEncoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
-                    != 0) {
+            final ByteBuffer encoderOutputBuffer = mVideoEncoderOutputBuffers[encoderOutputBufferIndex];
+            if ((mVideoEncoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                 if (VERBOSE) Log.d(TAG, "video encoder: codec config buffer");
                 // Simply ignore codec config buffers.
                 mVideoEncoder.releaseOutputBuffer(encoderOutputBufferIndex, false);
                 break;
             }
             if (VERBOSE) {
-                Log.d(TAG, "video encoder: returned buffer for time "
-                        + mVideoEncoderOutputBufferInfo.presentationTimeUs);
+                Log.d(TAG, "video encoder: returned buffer for time " + mVideoEncoderOutputBufferInfo.presentationTimeUs);
             }
             if (mVideoEncoderOutputBufferInfo.size != 0) {
                 mMuxer.writeSampleData(mOutputVideoTrack, encoderOutputBuffer, mVideoEncoderOutputBufferInfo);
@@ -430,7 +409,11 @@ class VideoTrackConverter {
         Preconditions.checkState("decoded frame count should be less than extracted frame count", mVideoDecodedFrameCount <= mVideoExtractedFrameCount);
     }
 
-    private static String createFragmentShader(int srcWidth, int srcHeight, int dstWidth, int dstHeight) {
+    private static String createFragmentShader(
+            final int srcWidth,
+            final int srcHeight,
+            final int dstWidth,
+            final int dstHeight) {
         final float kernelSizeX = (float) srcWidth / (float) dstWidth;
         final float kernelSizeY = (float) srcHeight / (float) dstHeight;
         Log.i(TAG, "kernel " + kernelSizeX + "x" + kernelSizeY);
@@ -450,7 +433,7 @@ class VideoTrackConverter {
             final float stepX = kernelSizeX / (1 + 2 * kernelRadiusX) * (1f / srcWidth);
             final float stepY = kernelSizeY / (1 + 2 * kernelRadiusY) * (1f / srcHeight);
             final float sum = (1 + 2 * kernelRadiusX) * (1 + 2 * kernelRadiusY);
-            StringBuilder colorLoop = new StringBuilder();
+            final StringBuilder colorLoop = new StringBuilder();
             for (int i = -kernelRadiusX; i <=kernelRadiusX; i++) {
                 for (int j = -kernelRadiusY; j <=kernelRadiusY; j++) {
                     if (i != 0 || j != 0) {
@@ -474,36 +457,22 @@ class VideoTrackConverter {
         return shader;
     }
 
-    /**
-     * Creates a decoder for the given format, which outputs to the given surface.
-     *
-     * @param inputFormat the format of the stream to decode
-     * @param surface     into which to decode the frames
-     */
-    private @NonNull MediaCodec createVideoDecoder(@NonNull MediaFormat inputFormat, @NonNull Surface surface) throws IOException {
-        MediaCodec decoder = MediaCodec.createDecoderByType(MediaConverter.getMimeTypeFor(inputFormat));
+    private @NonNull MediaCodec createVideoDecoder(
+            final @NonNull MediaFormat inputFormat,
+            final @NonNull Surface surface) throws IOException {
+        final MediaCodec decoder = MediaCodec.createDecoderByType(MediaConverter.getMimeTypeFor(inputFormat));
         decoder.configure(inputFormat, surface, null, 0);
         decoder.start();
         return decoder;
     }
 
-    /**
-     * Creates an encoder for the given format using the specified codec, taking input from a
-     * surface.
-     *
-     * <p>The surface to use as input is stored in the given reference.
-     *
-     * @param codecInfo        of the codec to use
-     * @param format           of the stream to be produced
-     * @param surfaceReference to store the surface to use as input
-     */
     private @NonNull MediaCodec createVideoEncoder(
-            @NonNull MediaCodecInfo codecInfo,
-            @NonNull MediaFormat format,
-            @NonNull AtomicReference<Surface> surfaceReference) throws IOException {
-        MediaCodec encoder = MediaCodec.createByCodecName(codecInfo.getName());
+            final @NonNull MediaCodecInfo codecInfo,
+            final @NonNull MediaFormat format,
+            final @NonNull AtomicReference<Surface> surfaceReference) throws IOException {
+        final MediaCodec encoder = MediaCodec.createByCodecName(codecInfo.getName());
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        // Must be called before start() is.
+        // Must be called before start()
         surfaceReference.set(encoder.createInputSurface());
         encoder.start();
         return encoder;
@@ -522,7 +491,7 @@ class VideoTrackConverter {
         return -1;
     }
 
-    private static boolean isVideoFormat(MediaFormat format) {
+    private static boolean isVideoFormat(final @NonNull MediaFormat format) {
         return MediaConverter.getMimeTypeFor(format).startsWith("video/");
     }
 }
