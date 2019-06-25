@@ -14,14 +14,12 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class StreamingMuxer implements Muxer {
 
     private final OutputStream outputStream;
-    private final Map<Integer, Track> tracks = new HashMap<>();
+    private final List<MediaCodecTrack> tracks = new ArrayList<>();
     private Mp4Writer mp4Writer;
 
     public StreamingMuxer(OutputStream outputStream) {
@@ -31,7 +29,7 @@ public class StreamingMuxer implements Muxer {
     @Override
     public void start() throws IOException {
         final List<StreamingTrack> source = new ArrayList<>();
-        for (Track track : tracks.values()) {
+        for (MediaCodecTrack track : tracks) {
             source.add((StreamingTrack) track);
         }
         mp4Writer = new Mp4Writer(source, Channels.newChannel(outputStream));
@@ -39,24 +37,32 @@ public class StreamingMuxer implements Muxer {
 
     @Override
     public void stop() throws IOException {
-        for (Track track : tracks.values()) {
+        if (mp4Writer == null) {
+            throw new IllegalStateException("calling stop prior to start");
+        }
+        for (MediaCodecTrack track : tracks) {
             track.finish();
         }
         mp4Writer.close();
+        mp4Writer = null;
     }
 
     @Override
     public int addTrack(@NonNull MediaFormat format) throws IOException {
 
         final String mime = format.getString(MediaFormat.KEY_MIME);
-        if (mime.equals("video/avc")) {
-            tracks.put(tracks.size(), new MediaCodecAvcTrack(format));
-        } else if (mime.equals("audio/mp4a-latm")) {
-            tracks.put(tracks.size(), new MediaCodecAacTrack(format));
-        } else if (mime.equals("video/hevc")) {
-            tracks.put(tracks.size(), new MediaCodecHevcTrack(format));
-        } else {
-            throw new IllegalArgumentException("unknown track format");
+        switch (mime) {
+            case "video/avc":
+                tracks.add(new MediaCodecAvcTrack(format));
+                break;
+            case "audio/mp4a-latm":
+                tracks.add(new MediaCodecAacTrack(format));
+                break;
+            case "video/hevc":
+                tracks.add(new MediaCodecHevcTrack(format));
+                break;
+            default:
+                throw new IllegalArgumentException("unknown track format");
         }
         return tracks.size() - 1;
     }
@@ -70,36 +76,20 @@ public class StreamingMuxer implements Muxer {
     public void release() {
     }
 
-    interface Track {
+    interface MediaCodecTrack {
         void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException;
         void finish() throws IOException;
     }
 
-    static class MediaCodecAvcTrack extends AvcTrack implements Track {
+    static class MediaCodecAvcTrack extends AvcTrack implements MediaCodecTrack {
 
-        MediaCodecAvcTrack(@NonNull MediaFormat format) throws IOException {
-            final ByteBuffer cdsBuffer0 = format.getByteBuffer("csd-0");
-            final byte [] cds0 = new byte [cdsBuffer0.capacity() - 4];
-            cdsBuffer0.position(4);
-            cdsBuffer0.get(cds0, 0, cds0.length);
-            consumeNal(ByteBuffer.wrap(cds0), 0);
-
-            final ByteBuffer cdsBuffer1 = format.getByteBuffer("csd-1");
-            final byte [] cds1 = new byte [cdsBuffer1.capacity() - 4];
-            cdsBuffer1.position(4);
-            cdsBuffer1.get(cds1, 0, cds1.length);
-            consumeNal(ByteBuffer.wrap(cds1), 0);
-
-            setTimescale(90000);
-            setFrametick(3000);
+        MediaCodecAvcTrack(@NonNull MediaFormat format) {
+            super(Utils.subBuffer(format.getByteBuffer("csd-0"), 4), Utils.subBuffer(format.getByteBuffer("csd-1"), 4));
         }
 
         @Override
         public void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
-            final byte [] buffer = new byte[bufferInfo.size - 4];
-            byteBuf.position(bufferInfo.offset + 4);
-            byteBuf.get(buffer, 0, bufferInfo.size - 4);
-            consumeNal(ByteBuffer.wrap(buffer), bufferInfo.presentationTimeUs);
+            consumeNal(Utils.subBuffer(byteBuf, bufferInfo.offset + 4, bufferInfo.size - 4), bufferInfo.presentationTimeUs);
         }
 
         @Override
@@ -108,18 +98,15 @@ public class StreamingMuxer implements Muxer {
         }
     }
 
-    static class MediaCodecHevcTrack extends HevcTrack implements Track {
+    static class MediaCodecHevcTrack extends HevcTrack implements MediaCodecTrack {
 
         MediaCodecHevcTrack(@NonNull MediaFormat format) throws IOException {
-            configure(format.getByteBuffer("csd-0"));
+            super(Utils.getNals(format.getByteBuffer("csd-0")));
         }
 
         @Override
         public void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
-            final byte [] buffer = new byte[bufferInfo.size - 4];
-            byteBuf.position(bufferInfo.offset + 4);
-            byteBuf.get(buffer, 0, bufferInfo.size - 4);
-            consumeNal(ByteBuffer.wrap(buffer), bufferInfo.presentationTimeUs);
+            consumeNal(Utils.subBuffer(byteBuf, 4), bufferInfo.presentationTimeUs);
         }
 
         @Override
@@ -128,7 +115,7 @@ public class StreamingMuxer implements Muxer {
         }
     }
 
-    static class MediaCodecAacTrack extends AacTrack implements Track {
+    static class MediaCodecAacTrack extends AacTrack implements MediaCodecTrack {
 
         MediaCodecAacTrack(@NonNull MediaFormat format) {
             super(format.getInteger(MediaFormat.KEY_BIT_RATE), format.getInteger(MediaFormat.KEY_BIT_RATE),
@@ -141,7 +128,7 @@ public class StreamingMuxer implements Muxer {
             final byte [] buffer = new byte[bufferInfo.size];
             byteBuf.position(bufferInfo.offset);
             byteBuf.get(buffer, 0, bufferInfo.size);
-            processSample(buffer);
+            processSample(ByteBuffer.wrap(buffer));
         }
 
         @Override
