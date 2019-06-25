@@ -18,24 +18,14 @@ package com.dstukalov.videoconverter;
 
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
-import android.opengl.GLES20;
-import android.opengl.GLES11Ext;
-import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import android.util.Log;
 import android.view.Surface;
-
-import java.nio.ByteBuffer;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.egl.EGLSurface;
-import javax.microedition.khronos.opengles.GL;
-import javax.microedition.khronos.opengles.GL10;
-
-
 
 /**
  * Holds state associated with a Surface used for MediaCodec decoder output.
@@ -66,7 +56,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private SurfaceTexture mSurfaceTexture;
     private Surface mSurface;
 
-    private Object mFrameSyncObject = new Object();     // guards mFrameAvailable
+    private final Object mFrameSyncObject = new Object();     // guards mFrameAvailable
     private boolean mFrameAvailable;
 
     private TextureRender mTextureRender;

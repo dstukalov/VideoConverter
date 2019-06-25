@@ -20,16 +20,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
-import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
-
 
 /**
  * Code for rendering a texture onto a surface using OpenGL ES 2.0.
@@ -49,7 +44,7 @@ class TextureRender {
         1.0f,  1.0f, 0, 1.f, 1.f,
     };
 
-    private FloatBuffer mTriangleVertices;
+    private final FloatBuffer mTriangleVertices;
 
     private static final String VERTEX_SHADER =
             "uniform mat4 uMVPMatrix;\n" +
@@ -71,8 +66,8 @@ class TextureRender {
             "  gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
             "}\n";
 
-    private float[] mMVPMatrix = new float[16];
-    private float[] mSTMatrix = new float[16];
+    private final float[] mMVPMatrix = new float[16];
+    private final float[] mSTMatrix = new float[16];
 
     private int mProgram;
     private int mTextureID = -12345;

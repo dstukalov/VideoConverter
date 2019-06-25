@@ -28,18 +28,18 @@ class AudioTrackConverter {
     private final long mTimeTo;
     private final int mAudioBitrate;
 
-    long mInputDuration;
+    final long mInputDuration;
 
-    private MediaExtractor mAudioExtractor;
-    private MediaCodec mAudioDecoder;
-    private MediaCodec mAudioEncoder;
+    private final MediaExtractor mAudioExtractor;
+    private final MediaCodec mAudioDecoder;
+    private final MediaCodec mAudioEncoder;
 
-    private ByteBuffer[] mAudioDecoderInputBuffers;
+    private final ByteBuffer[] mAudioDecoderInputBuffers;
     private ByteBuffer[] mAudioDecoderOutputBuffers;
-    private ByteBuffer[] mAudioEncoderInputBuffers;
+    private final ByteBuffer[] mAudioEncoderInputBuffers;
     private ByteBuffer[] mAudioEncoderOutputBuffers;
-    private MediaCodec.BufferInfo mAudioDecoderOutputBufferInfo;
-    private MediaCodec.BufferInfo mAudioEncoderOutputBufferInfo;
+    private final MediaCodec.BufferInfo mAudioDecoderOutputBufferInfo;
+    private final MediaCodec.BufferInfo mAudioEncoderOutputBufferInfo;
 
     MediaFormat mEncoderOutputAudioFormat;
 

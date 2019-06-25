@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 
 public class AacTrack extends AbstractStreamingTrack {
 
-    private static SparseIntArray SAMPLING_FREQUENCY_INDEX_MAP = new SparseIntArray();
+    private static final SparseIntArray SAMPLING_FREQUENCY_INDEX_MAP = new SparseIntArray();
     static {
         SAMPLING_FREQUENCY_INDEX_MAP.put(96000, 0);
         SAMPLING_FREQUENCY_INDEX_MAP.put(88200, 1);
