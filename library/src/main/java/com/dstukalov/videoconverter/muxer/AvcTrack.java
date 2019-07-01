@@ -14,8 +14,8 @@ import org.mp4parser.streaming.extensions.CompositionTimeSampleExtension;
 import org.mp4parser.streaming.extensions.CompositionTimeTrackExtension;
 import org.mp4parser.streaming.extensions.DimensionTrackExtension;
 import org.mp4parser.streaming.extensions.SampleFlagsSampleExtension;
+import org.mp4parser.streaming.input.AbstractStreamingTrack;
 import org.mp4parser.streaming.input.StreamingSampleImpl;
-import org.mp4parser.streaming.input.h264.AbstractH264Track;
 import org.mp4parser.streaming.input.h264.H264NalUnitHeader;
 import org.mp4parser.streaming.input.h264.H264NalUnitTypes;
 import org.mp4parser.streaming.input.h264.spspps.PictureParameterSet;
@@ -29,7 +29,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class AvcTrack extends AbstractH264Track {
+public class AvcTrack extends AbstractStreamingTrack {
 
     private static final String TAG = "AvcTrack";
 
