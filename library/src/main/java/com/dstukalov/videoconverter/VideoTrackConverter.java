@@ -21,7 +21,7 @@ class VideoTrackConverter {
     private static final String TAG = "media-converter";
     private static final boolean VERBOSE = false; // lots of logging
 
-    private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 10; // 10 seconds between I-frames
+    private static final int OUTPUT_VIDEO_IFRAME_INTERVAL = 1; // 1 second between I-frames
     private static final int OUTPUT_VIDEO_FRAME_RATE = 30; // needed only for MediaFormat.KEY_I_FRAME_INTERVAL to work; the actual frame rate matches the source
 
     private static final int TIMEOUT_USEC = 10000;
