@@ -1,5 +1,6 @@
 package com.dstukalov.videoconverter;
 
+import android.annotation.TargetApi;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
@@ -7,6 +8,7 @@ import android.media.MediaMuxer;
 import androidx.annotation.NonNull;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -16,6 +18,11 @@ public class AndroidMuxer implements Muxer {
 
     AndroidMuxer(final @NonNull File file) throws IOException {
         muxer = new MediaMuxer(file.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+    }
+
+    @TargetApi(26)
+    AndroidMuxer(final @NonNull FileDescriptor fileDescriptor) throws IOException {
+        muxer = new MediaMuxer(fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
     }
 
 

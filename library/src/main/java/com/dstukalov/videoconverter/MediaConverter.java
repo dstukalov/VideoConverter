@@ -16,6 +16,7 @@
 
 package com.dstukalov.videoconverter;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
@@ -25,6 +26,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -83,6 +85,12 @@ public class MediaConverter {
     @SuppressWarnings("unused")
     public void setOutput(final @NonNull File file) {
         mOutput = new FileOutput(file);
+    }
+
+    @SuppressWarnings("unused")
+    @TargetApi(26)
+    public void setOutput(final @NonNull FileDescriptor fileDescriptor) {
+        mOutput = new FileDescriptorOutput(fileDescriptor);
     }
 
     @SuppressWarnings("unused")
@@ -355,6 +363,21 @@ public class MediaConverter {
         @Override
         public @NonNull Muxer createMuxer() throws IOException {
             return new AndroidMuxer(file);
+        }
+    }
+
+    @TargetApi(26)
+    private static class FileDescriptorOutput implements Output {
+
+        final FileDescriptor fileDescriptor;
+
+        FileDescriptorOutput(final @NonNull FileDescriptor fileDescriptor) {
+            this.fileDescriptor = fileDescriptor;
+        }
+
+        @Override
+        public @NonNull Muxer createMuxer() throws IOException {
+            return new AndroidMuxer(fileDescriptor);
         }
     }
 
