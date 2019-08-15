@@ -16,10 +16,10 @@
 
 package com.dstukalov.videoconverter;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
+import android.media.MediaDataSource;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.net.Uri;
@@ -35,6 +35,7 @@ import java.lang.annotation.RetentionPolicy;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.StringDef;
 import androidx.annotation.WorkerThread;
 
@@ -83,12 +84,18 @@ public class MediaConverter {
     }
 
     @SuppressWarnings("unused")
+    @RequiresApi(23)
+    public void setInput(final @NonNull MediaDataSource mediaDataSource) {
+        mInput = new MediaDataSourceInput(mediaDataSource);
+    }
+
+    @SuppressWarnings("unused")
     public void setOutput(final @NonNull File file) {
         mOutput = new FileOutput(file);
     }
 
     @SuppressWarnings("unused")
-    @TargetApi(26)
+    @RequiresApi(26)
     public void setOutput(final @NonNull FileDescriptor fileDescriptor) {
         mOutput = new FileDescriptorOutput(fileDescriptor);
     }
@@ -348,6 +355,23 @@ public class MediaConverter {
         }
     }
 
+    @RequiresApi(23)
+    private static class MediaDataSourceInput implements Input {
+
+        private final MediaDataSource mediaDataSource;
+
+        MediaDataSourceInput(final @NonNull MediaDataSource mediaDataSource) {
+            this.mediaDataSource = mediaDataSource;
+        }
+
+        @Override
+        public @NonNull MediaExtractor createExtractor() throws IOException {
+            final MediaExtractor extractor = new MediaExtractor();
+            extractor.setDataSource(mediaDataSource);
+            return extractor;
+        }
+    }
+
     interface Output {
         @NonNull Muxer createMuxer() throws IOException;
     }
@@ -366,7 +390,7 @@ public class MediaConverter {
         }
     }
 
-    @TargetApi(26)
+    @RequiresApi(26)
     private static class FileDescriptorOutput implements Output {
 
         final FileDescriptor fileDescriptor;
