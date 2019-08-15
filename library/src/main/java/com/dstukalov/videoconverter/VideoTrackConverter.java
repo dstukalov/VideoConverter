@@ -26,6 +26,9 @@ class VideoTrackConverter {
 
     private static final int TIMEOUT_USEC = 10000;
 
+    private static final String MEDIA_FORMAT_KEY_DISPLAY_WIDTH = "display-width";
+    private static final String MEDIA_FORMAT_KEY_DISPLAY_HEIGHT = "display-height";
+
     private final long mTimeFrom;
     private final long mTimeTo;
 
@@ -102,8 +105,8 @@ class VideoTrackConverter {
         mInputDuration = inputVideoFormat.containsKey(MediaFormat.KEY_DURATION) ? inputVideoFormat.getLong(MediaFormat.KEY_DURATION) : 0;
 
         final int rotation = inputVideoFormat.containsKey(MediaFormat.KEY_ROTATION) ? inputVideoFormat.getInteger(MediaFormat.KEY_ROTATION) : 0;
-        final int width = inputVideoFormat.getInteger(MediaFormat.KEY_WIDTH);
-        final int height = inputVideoFormat.getInteger(MediaFormat.KEY_HEIGHT);
+        final int width = inputVideoFormat.containsKey(MEDIA_FORMAT_KEY_DISPLAY_WIDTH) ? inputVideoFormat.getInteger(MEDIA_FORMAT_KEY_DISPLAY_WIDTH) : inputVideoFormat.getInteger(MediaFormat.KEY_WIDTH);
+        final int height = inputVideoFormat.containsKey(MEDIA_FORMAT_KEY_DISPLAY_HEIGHT) ? inputVideoFormat.getInteger(MEDIA_FORMAT_KEY_DISPLAY_HEIGHT) : inputVideoFormat.getInteger(MediaFormat.KEY_HEIGHT);
         int outputWidth = width;
         int outputHeight = height;
         if (outputWidth < outputHeight) {
