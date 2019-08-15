@@ -47,7 +47,7 @@ publishing {
         videoconverter(MavenPublication) {
             groupId 'com.dstukalov'
             artifactId 'videoconverter'
-            version '1.4'
+            version '1.5'
             artifact(sourceJar)
             artifact("$buildDir/outputs/aar/library-release.aar")
 
