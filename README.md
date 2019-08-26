@@ -5,23 +5,26 @@ Video file conversion library based on <a href="https://android.googlesource.com
 
 ## Installation
 VideoConverter is installed by adding the following dependency to your build.gradle file:
-
-    dependencies {
-        implementation 'com.dstukalov:videoconverter:1.5'
-    }
+```groovy
+dependencies {
+    implementation 'com.dstukalov:videoconverter:1.5'
+}
+```
 
 ## Usage
-    MediaConverter converter = new MediaConverter();
-    converter.setInput(context, uri);
-    converter.setOutput(outputStream);
-    converter.setTimeRange(timeFrom, timeTo);
-    converter.setVideoResolution(360);
-    converter.setVideoBitrate(2000000);
-    converter.setAudioBitrate(128000);
+```java
+MediaConverter converter = new MediaConverter();
+converter.setInput(context, uri);
+converter.setOutput(outputStream);
+converter.setTimeRange(timeFrom, timeTo);
+converter.setVideoResolution(360);
+converter.setVideoBitrate(2000000);
+converter.setAudioBitrate(128000);
 
-    converter.setListener(percent -> {
-        publishProgress(percent);
-        return isCancelled();
-    });
+converter.setListener(percent -> {
+    publishProgress(percent);
+    return isCancelled();
+});
 
-    converter.convert();
+converter.convert();
+```
