@@ -1,4 +1,5 @@
-[ ![Download](https://api.bintray.com/packages/dstukalov/VideoConverter/VideoConverter/images/download.svg) ](https://bintray.com/dstukalov/VideoConverter/VideoConverter/_latestVersion)
+[![Download](https://api.bintray.com/packages/dstukalov/VideoConverter/VideoConverter/images/download.svg)](https://bintray.com/dstukalov/VideoConverter/VideoConverter/_latestVersion)
+[![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
 
 # VideoConverter
 Video file conversion library based on <a href="https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/ExtractDecodeEditEncodeMuxTest.java">ExtractDecodeEditEncodeMuxTest.java</a> CTS test
