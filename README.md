@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f4904c4356fd432c8e9edd85a5468c5c)](https://app.codacy.com/app/dstukalov/VideoConverter?utm_source=github.com&utm_medium=referral&utm_content=dstukalov/VideoConverter&utm_campaign=Badge_Grade_Dashboard)
 [![Download](https://api.bintray.com/packages/dstukalov/VideoConverter/VideoConverter/images/download.svg)](https://bintray.com/dstukalov/VideoConverter/VideoConverter/_latestVersion)
 [![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
 
