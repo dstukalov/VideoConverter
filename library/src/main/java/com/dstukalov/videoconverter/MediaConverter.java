@@ -144,7 +144,7 @@ public class MediaConverter {
     }
 
     @WorkerThread
-    public void convert() throws BadVideoException, IOException {
+    public void convert() throws BadMediaException, IOException, MediaConversionException {
         // Exception that may be thrown during release.
         Exception exception = null;
         Muxer muxer = null;
@@ -157,7 +157,7 @@ public class MediaConverter {
 
             if (videoTrackConverter == null && audioTrackConverter == null) {
                 Log.e(TAG, "no video and audio tracks");
-                throw new BadVideoException();
+                throw new BadMediaException();
             }
 
             muxer = mOutput.createMuxer();
@@ -167,7 +167,7 @@ public class MediaConverter {
                     audioTrackConverter,
                     muxer);
 
-        } catch (BadVideoException | IOException e) {
+        } catch (BadMediaException | IOException e) {
             Log.e(TAG, "error converting", e);
             exception = e;
             throw e;
@@ -212,7 +212,7 @@ public class MediaConverter {
             }
         }
         if (exception != null) {
-            throw new RuntimeException(exception);
+            throw new MediaConversionException(exception);
         }
     }
 

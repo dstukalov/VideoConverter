@@ -105,7 +105,7 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
             if (streamingTrack.getTrackExtension(TrackIdTrackExtension.class) != null) {
                 final TrackIdTrackExtension trackIdTrackExtension = streamingTrack.getTrackExtension(TrackIdTrackExtension.class);
                 if (trackIds.contains(trackIdTrackExtension.getTrackId())) {
-                    throw new RuntimeException("There may not be two tracks with the same trackID within one file");
+                    throw new MuxingException("There may not be two tracks with the same trackID within one file");
                 }
                 trackIds.add(trackIdTrackExtension.getTrackId());
             }

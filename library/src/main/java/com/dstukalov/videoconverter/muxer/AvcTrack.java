@@ -154,7 +154,7 @@ public class AvcTrack extends AbstractStreamingTrack {
         if (sps.pic_order_cnt_type == 0) {
             addTrackExtension(new CompositionTimeTrackExtension());
         } else if (sps.pic_order_cnt_type == 1) {
-            throw new RuntimeException("Have not yet imlemented pic_order_cnt_type 1");
+            throw new MuxingException("Have not yet imlemented pic_order_cnt_type 1");
         }
     }
 
@@ -324,11 +324,11 @@ public class AvcTrack extends AbstractStreamingTrack {
                 drainDecPictureBuffer(false);
             }*/
         } else if (sliceHeader.sps.pic_order_cnt_type == 1) {
-            throw new RuntimeException("pic_order_cnt_type == 1 needs to be implemented");
+            throw new MuxingException("pic_order_cnt_type == 1 needs to be implemented");
         } else if (sliceHeader.sps.pic_order_cnt_type == 2) {
             return null; // no ctts
         }
-        throw new RuntimeException("I don't know sliceHeader.sps.pic_order_cnt_type of " + sliceHeader.sps.pic_order_cnt_type);
+        throw new MuxingException("I don't know sliceHeader.sps.pic_order_cnt_type of " + sliceHeader.sps.pic_order_cnt_type);
     }
 
 
@@ -350,13 +350,13 @@ public class AvcTrack extends AbstractStreamingTrack {
             final PictureParameterSet _pictureParameterSet = PictureParameterSet.read(nal);
             final ByteBuffer oldPpsSameId = ppsIdToPpsBytes.get(_pictureParameterSet.pic_parameter_set_id);
             if (oldPpsSameId != null && !oldPpsSameId.equals(nal)) {
-                throw new RuntimeException("OMG - I got two SPS with same ID but different settings! (AVC3 is the solution)");
+                throw new MuxingException("OMG - I got two SPS with same ID but different settings! (AVC3 is the solution)");
             } else {
                 ppsIdToPpsBytes.put(_pictureParameterSet.pic_parameter_set_id, nal);
                 ppsIdToPps.put(_pictureParameterSet.pic_parameter_set_id, _pictureParameterSet);
             }
         } catch (IOException e) {
-            throw new RuntimeException("That's surprising to get IOException when working on ByteArrayInputStream", e);
+            throw new MuxingException("That's surprising to get IOException when working on ByteArrayInputStream", e);
         }
 
 
@@ -368,14 +368,14 @@ public class AvcTrack extends AbstractStreamingTrack {
             final SeqParameterSet seqParameterSet = SeqParameterSet.read(nal);
             final ByteBuffer oldSpsSameId = spsIdToSpsBytes.get(seqParameterSet.seq_parameter_set_id);
             if (oldSpsSameId != null && !oldSpsSameId.equals(nal)) {
-                throw new RuntimeException("OMG - I got two SPS with same ID but different settings!");
+                throw new MuxingException("OMG - I got two SPS with same ID but different settings!");
             } else {
                 spsIdToSpsBytes.put(seqParameterSet.seq_parameter_set_id, nal);
                 spsIdToSps.put(seqParameterSet.seq_parameter_set_id, seqParameterSet);
             }
             return seqParameterSet;
         } catch (IOException e) {
-            throw new RuntimeException("That's surprising to get IOException when working on ByteArrayInputStream", e);
+            throw new MuxingException("That's surprising to get IOException when working on ByteArrayInputStream", e);
         }
 
     }

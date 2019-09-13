@@ -18,6 +18,7 @@ package com.dstukalov.videoconverter;
 
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
+import android.opengl.GLException;
 import android.util.Log;
 import android.view.Surface;
 
@@ -42,7 +43,7 @@ import javax.microedition.khronos.egl.EGLSurface;
  * By default, the Surface will be using a BufferQueue in asynchronous mode, so we
  * can potentially drop frames.
  */
-class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
+public class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "OutputSurface";
     private static final boolean VERBOSE = false;
 
@@ -123,7 +124,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         mEGL = (EGL10)EGLContext.getEGL();
         mEGLDisplay = mEGL.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
         if (!mEGL.eglInitialize(mEGLDisplay, null)) {
-            throw new RuntimeException("unable to initialize EGL10");
+            throw new GLException(0, "unable to initialize EGL10");
         }
 
         // Configure EGL for pbuffer and OpenGL ES 2.0.  We want enough RGB bits
@@ -139,7 +140,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         EGLConfig[] configs = new EGLConfig[1];
         int[] numConfigs = new int[1];
         if (!mEGL.eglChooseConfig(mEGLDisplay, attribList, configs, 1, numConfigs)) {
-            throw new RuntimeException("unable to find RGB888+pbuffer EGL config");
+            throw new GLException(0, "unable to find RGB888+pbuffer EGL config");
         }
 
         // Configure context for OpenGL ES 2.0.
@@ -151,7 +152,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
                 attrib_list);
         checkEglError("eglCreateContext");
         if (mEGLContext == null) {
-            throw new RuntimeException("null context");
+            throw new GLException(0, "null context");
         }
 
         // Create a pbuffer surface.  By using this for output, we can use glReadPixels
@@ -164,7 +165,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         mEGLSurface = mEGL.eglCreatePbufferSurface(mEGLDisplay, configs[0], surfaceAttribs);
         checkEglError("eglCreatePbufferSurface");
         if (mEGLSurface == null) {
-            throw new RuntimeException("surface was null");
+            throw new GLException(0, "surface was null");
         }
     }
 
@@ -205,11 +206,11 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
      */
     public void makeCurrent() {
         if (mEGL == null) {
-            throw new RuntimeException("not configured for makeCurrent");
+            throw new GLException(0, "not configured for makeCurrent");
         }
         checkEglError("before makeCurrent");
         if (!mEGL.eglMakeCurrent(mEGLDisplay, mEGLSurface, mEGLSurface, mEGLContext)) {
-            throw new RuntimeException("eglMakeCurrent failed");
+            throw new GLException(0, "eglMakeCurrent failed");
         }
     }
 
@@ -247,11 +248,11 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
                     remainingWait = TIMEOUT_MS - (System.currentTimeMillis() - waitStart);
                 } catch (InterruptedException ie) {
                     // shouldn't happen
-                    throw new RuntimeException(ie);
+                    throw new GLException(0, ie.toString());
                 }
             }
             if (!mFrameAvailable) {
-                throw new RuntimeException("Surface frame wait timed out");
+                throw new GLException(0, "Surface frame wait timed out");
             }
             mFrameAvailable = false;
         }
@@ -273,7 +274,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         if (VERBOSE) Log.d(TAG, "new frame available");
         synchronized (mFrameSyncObject) {
             if (mFrameAvailable) {
-                throw new RuntimeException("mFrameAvailable already set, frame could be dropped");
+                throw new GLException(0, "mFrameAvailable already set, frame could be dropped");
             }
             mFrameAvailable = true;
             mFrameSyncObject.notifyAll();
@@ -291,7 +292,7 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
             failed = true;
         }
         if (failed) {
-            throw new RuntimeException("EGL error encountered (see log)");
+            throw new GLException(0, "EGL error encountered (see log)");
         }
     }
 }

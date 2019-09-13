@@ -23,6 +23,7 @@ import java.nio.FloatBuffer;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLException;
 import android.opengl.Matrix;
 import android.util.Log;
 
@@ -131,29 +132,29 @@ class TextureRender {
     public void surfaceCreated() {
         mProgram = createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
         if (mProgram == 0) {
-            throw new RuntimeException("failed creating program");
+            throw new GLException(0, "failed creating program");
         }
         maPositionHandle = GLES20.glGetAttribLocation(mProgram, "aPosition");
         checkGlError("glGetAttribLocation aPosition");
         if (maPositionHandle == -1) {
-            throw new RuntimeException("Could not get attrib location for aPosition");
+            throw new GLException(0, "Could not get attrib location for aPosition");
         }
         maTextureHandle = GLES20.glGetAttribLocation(mProgram, "aTextureCoord");
         checkGlError("glGetAttribLocation aTextureCoord");
         if (maTextureHandle == -1) {
-            throw new RuntimeException("Could not get attrib location for aTextureCoord");
+            throw new GLException(0, "Could not get attrib location for aTextureCoord");
         }
 
         muMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
         checkGlError("glGetUniformLocation uMVPMatrix");
         if (muMVPMatrixHandle == -1) {
-            throw new RuntimeException("Could not get attrib location for uMVPMatrix");
+            throw new GLException(0, "Could not get attrib location for uMVPMatrix");
         }
 
         muSTMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uSTMatrix");
         checkGlError("glGetUniformLocation uSTMatrix");
         if (muSTMatrixHandle == -1) {
-            throw new RuntimeException("Could not get attrib location for uSTMatrix");
+            throw new GLException(0, "Could not get attrib location for uSTMatrix");
         }
 
         int[] textures = new int[1];
@@ -181,7 +182,7 @@ class TextureRender {
         GLES20.glDeleteProgram(mProgram);
         mProgram = createProgram(VERTEX_SHADER, fragmentShader);
         if (mProgram == 0) {
-            throw new RuntimeException("failed creating program");
+            throw new GLException(0, "failed creating program");
         }
     }
 
@@ -236,7 +237,7 @@ class TextureRender {
         int error;
         while ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
             Log.e(TAG, op + ": glError " + error);
-            throw new RuntimeException(op + ": glError " + error);
+            throw new GLException(0, op + ": glError " + error);
         }
     }
 }

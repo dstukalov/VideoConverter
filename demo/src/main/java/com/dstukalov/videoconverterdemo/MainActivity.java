@@ -25,7 +25,14 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.dstukalov.videoconverter.BadVideoException;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.core.content.FileProvider;
+
+import com.dstukalov.videoconverter.BadMediaException;
+import com.dstukalov.videoconverter.MediaConversionException;
 import com.dstukalov.videoconverter.MediaConverter;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
@@ -37,12 +44,6 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
-import androidx.core.content.FileProvider;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -592,7 +593,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 mConverter.convert();
-            } catch (BadVideoException | IOException e) {
+            } catch (BadMediaException | IOException | MediaConversionException e) {
                 Log.e(TAG, "failed to convert: " + e.toString());
                 return Boolean.FALSE;
             }

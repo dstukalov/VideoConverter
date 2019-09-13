@@ -22,6 +22,7 @@ import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLSurface;
+import android.opengl.GLException;
 import android.util.Log;
 import android.view.Surface;
 
@@ -64,12 +65,12 @@ class InputSurface {
     private void eglSetup() {
         mEGLDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         if (mEGLDisplay == EGL14.EGL_NO_DISPLAY) {
-            throw new RuntimeException("unable to get EGL14 display");
+            throw new GLException(0, "unable to get EGL14 display");
         }
         int[] version = new int[2];
         if (!EGL14.eglInitialize(mEGLDisplay, version, 0, version, 1)) {
             mEGLDisplay = null;
-            throw new RuntimeException("unable to initialize EGL14");
+            throw new GLException(0, "unable to initialize EGL14");
         }
 
         // Configure EGL for pbuffer and OpenGL ES 2.0.  We want enough RGB bits
@@ -86,7 +87,7 @@ class InputSurface {
         int[] numConfigs = new int[1];
         if (!EGL14.eglChooseConfig(mEGLDisplay, attribList, 0, configs, 0, configs.length,
                 numConfigs, 0)) {
-            throw new RuntimeException("unable to find RGB888+recordable ES2 EGL config");
+            throw new GLException(0, "unable to find RGB888+recordable ES2 EGL config");
         }
 
         // Configure context for OpenGL ES 2.0.
@@ -98,7 +99,7 @@ class InputSurface {
                 attrib_list, 0);
         checkEglError("eglCreateContext");
         if (mEGLContext == null) {
-            throw new RuntimeException("null context");
+            throw new GLException(0, "null context");
         }
 
         // Create a window surface, and attach it to the Surface we received.
@@ -109,7 +110,7 @@ class InputSurface {
                 surfaceAttribs, 0);
         checkEglError("eglCreateWindowSurface");
         if (mEGLSurface == null) {
-            throw new RuntimeException("surface was null");
+            throw new GLException(0, "surface was null");
         }
     }
 
@@ -142,7 +143,7 @@ class InputSurface {
      */
     public void makeCurrent() {
         if (!EGL14.eglMakeCurrent(mEGLDisplay, mEGLSurface, mEGLSurface, mEGLContext)) {
-            throw new RuntimeException("eglMakeCurrent failed");
+            throw new GLException(0, "eglMakeCurrent failed");
         }
     }
 
@@ -178,7 +179,7 @@ class InputSurface {
             failed = true;
         }
         if (failed) {
-            throw new RuntimeException("EGL error encountered (see log)");
+            throw new GLException(0, "EGL error encountered (see log)");
         }
     }
 }
