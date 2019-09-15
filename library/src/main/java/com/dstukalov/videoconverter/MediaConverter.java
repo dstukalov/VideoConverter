@@ -298,7 +298,7 @@ public class MediaConverter {
      * Returns the first codec capable of encoding the specified MIME type, or null if no match was
      * found.
      */
-    static MediaCodecInfo selectCodec(final String mimeType) {
+    public static MediaCodecInfo selectCodec(final String mimeType) {
         final int numCodecs = MediaCodecList.getCodecCount();
         for (int i = 0; i < numCodecs; i++) {
             final MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(i);

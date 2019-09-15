@@ -8,7 +8,6 @@ import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
@@ -26,7 +25,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
@@ -37,6 +35,7 @@ import com.dstukalov.videoconverter.MediaConverter;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +43,7 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -53,18 +53,18 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
 
+    private View mMainLayout;
     private TextView mInputInfoView;
     private TextView mOutputInfoView;
     private ImageView mThumbView;
     private Button mConvertButton;
-    private ProgressBar mProgressBar;
+    private ProgressBar mConversionProgressBar;
+    private ProgressBar mLoadingProgressBar;
     private TextView mTimeView;
     private RangeSeekBar mRangeSeekBar;
     private VideoThumbnailsView mTimelineView;
     private TextView mTrimInfo;
 
-    private View mInputPlayButton;
-    private View mInputOptionsButton;
     private View mOutputPlayButton;
     private View mOutputSendButton;
     private View mOutputOptionsButton;
@@ -74,29 +74,25 @@ public class MainActivity extends AppCompatActivity {
     private ConversionTask mConversionTask;
     private boolean mConverted;
 
-    private WakeLock mWakeLock;
-
-    private File mCaptureFile;
-
     private File mOutputFolder;
 
-    private File mInputFile;
+    private File mInputFile; // = new File("/storage/emulated/0/Android/data/com.dstukalov.videoconverter/files/Temp/tmp.mp4");
     private File mOutputFile;
 
     private int mWidth;
     private int mHeight;
-    private int mRotation;
-    private long mDuration;
 
     private ConversionParameters mConversionParameters = CONV_PARAMS_360P;
     private long mTimeFrom;
     private long mTimeTo;
 
-    private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, 1333000, 64000);
-    private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, 2000000, 96000);
-    private static final ConversionParameters CONV_PARAMS_480P = new ConversionParameters(480, 2666000, 128000);
-    private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, 4000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, 6000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, MediaConverter.VIDEO_CODEC_H264, 1333000, 64000);
+    private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, MediaConverter.VIDEO_CODEC_H264, 2000000, 96000);
+    private static final ConversionParameters CONV_PARAMS_480P = new ConversionParameters(480, MediaConverter.VIDEO_CODEC_H264, 2666000, 128000);
+    private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_720P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  2000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -107,15 +103,10 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "cannot create " + mOutputFolder);
         }
 
-        mPreviewThread = new PreviewThread();
-        mPreviewThread.setPriority(Thread.NORM_PRIORITY - 1);
-        mPreviewThread.start();
-
-        final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VideoConverter:convert");
-
         setContentView(R.layout.main);
 
+        mMainLayout = findViewById(R.id.main);
+        mLoadingProgressBar = findViewById(R.id.loading_progress_bar);
         mInputInfoView = findViewById(R.id.input_info);
         mOutputInfoView = findViewById(R.id.output_info);
         mTimeView = findViewById(R.id.current_time);
@@ -124,8 +115,8 @@ public class MainActivity extends AppCompatActivity {
 
         mTrimInfo = findViewById(R.id.trim_info);
         mThumbView = findViewById(R.id.thumb);
-        mProgressBar = findViewById(R.id.progress_bar);
-        mProgressBar.setMax(100);
+        mConversionProgressBar = findViewById(R.id.progress_bar);
+        mConversionProgressBar.setMax(100);
         mConvertButton = findViewById(R.id.convert);
         mConvertButton.setOnClickListener(v -> {
             if (mConverted) {
@@ -143,11 +134,9 @@ public class MainActivity extends AppCompatActivity {
             updateButtons();
         });
 
-        mInputOptionsButton = this.findViewById(R.id.input_options);
-        mInputOptionsButton.setOnClickListener(v -> onInputOptions());
+        findViewById(R.id.input_options).setOnClickListener(v -> onInputOptions());
 
-        mInputPlayButton = this.findViewById(R.id.input_play);
-        mInputPlayButton.setOnClickListener(v -> {
+        findViewById(R.id.input_play).setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mInputFile), "video/*");
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -197,21 +186,10 @@ public class MainActivity extends AppCompatActivity {
             if (inputPath != null) {
                 mInputFile = new File(inputPath);
             }
-            final String capturePath = savedInstanceState.getString("capture");
-            if (capturePath != null) {
-                mCaptureFile = new File(capturePath);
-            }
         } else if (Intent.ACTION_SEND.equals(getIntent().getAction())) {
             final Uri uri = getIntent().getExtras() != null ? getIntent().getExtras().getParcelable(Intent.EXTRA_STREAM) : null;
             if (uri != null) {
-                final String filePath = getFileFromUri(uri);
-                if (filePath != null) {
-                    mInputFile = new File(filePath);
-                    mPreviewThread.requestShowFrame(0);
-                    initInputData();
-                } else {
-                    pickVideo();
-                }
+                loadUri(uri);
             } else {
                 pickVideo();
             }
@@ -220,7 +198,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (mInputFile != null) {
-            mPreviewThread.requestShowFrame(0);
             initInputData();
         }
 
@@ -232,9 +209,6 @@ public class MainActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         if (mInputFile != null) {
             outState.putCharSequence("input", mInputFile.getAbsolutePath());
-        }
-        if (mCaptureFile != null) {
-            outState.putCharSequence("capture", mCaptureFile.getAbsolutePath());
         }
     }
 
@@ -254,30 +228,17 @@ public class MainActivity extends AppCompatActivity {
         switch (request) {
             case ACTIVITY_REQUEST_CODE_PICK_VIDEO: {
                 if (result == Activity.RESULT_OK) {
-                    if (data != null && data.getBooleanExtra(ReselectActivity.RESELECT_EXTRA, false)) {
+                    if (data == null) {
+                        Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+                    } else if (data.getBooleanExtra(ReselectActivity.RESELECT_EXTRA, false)) {
                         mOutputFile = null;
                         mConverted = false;
                         updateButtons();
-                        mOutputInfoView.setText("");
-                        mTimeView.setText("");
-                        mPreviewThread.requestShowFrame(0);
                         initInputData();
                     } else {
-                        final String filePath = (data == null || data.getData() == null) ? mCaptureFile.getAbsolutePath() : getFileFromUri(data.getData());
-                        if (filePath != null) {
-                            if (filePath.equals(mCaptureFile.getAbsolutePath())) {
-                                final Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                                intent.setData(Uri.fromFile(mCaptureFile));
-                                getApplicationContext().sendBroadcast(intent);
-                            }
-                            mInputFile = new File(filePath);
-                            mOutputFile = null;
-                            mConverted = false;
-                            updateButtons();
-                            mOutputInfoView.setText("");
-                            mTimeView.setText("");
-                            mPreviewThread.requestShowFrame(0);
-                            initInputData();
+                        final Uri uri = data.getData();
+                        if (uri != null) {
+                            loadUri(uri);
                         } else {
                             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
                         }
@@ -295,6 +256,10 @@ public class MainActivity extends AppCompatActivity {
     private void onOutputOptions() {
         final PopupMenu popup = new PopupMenu(this, mOutputOptionsButton);
         popup.getMenuInflater().inflate(R.menu.output_options, popup.getMenu());
+        if (MediaConverter.selectCodec(MediaConverter.VIDEO_CODEC_H265) == null) {
+            popup.getMenu().removeItem(R.id.quality_720p_h265);
+            popup.getMenu().removeItem(R.id.quality_1080p_h265);
+        }
         popup.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case R.id.quality_240p:
@@ -309,8 +274,14 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.quality_720p:
                     mConversionParameters = CONV_PARAMS_720P;
                     break;
+                case R.id.quality_720p_h265:
+                    mConversionParameters = CONV_PARAMS_720P_H265;
+                    break;
                 case R.id.quality_1080p:
                     mConversionParameters = CONV_PARAMS_1080P;
+                    break;
+                case R.id.quality_1080p_h265:
+                    mConversionParameters = CONV_PARAMS_1080P_H265;
                     break;
             }
             estimateOutput();
@@ -326,6 +297,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void initInputData() {
 
+        if (mPreviewThread != null) {
+            mPreviewThread.interrupt();
+            mPreviewThread = null;
+        }
+        mPreviewThread = new PreviewThread(mInputFile.getAbsolutePath());
+        mPreviewThread.setPriority(Thread.NORM_PRIORITY - 1);
+        mPreviewThread.start();
+        mPreviewThread.requestShowFrame(0);
+
         final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
 
         try {
@@ -333,30 +313,41 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ex) {
             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
             mediaMetadataRetriever.release();
+            pickVideo();
             return;
         }
 
-        final String duration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
         final String width = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
         final String height = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
-        final String rotation = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
-
+        int rotation;
+        long duration;
+        try {
+            duration = Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+            rotation = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION));
+            mWidth = Integer.parseInt(width);
+            mHeight = Integer.parseInt(height);
+        } catch (NumberFormatException e) {
+            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+            mediaMetadataRetriever.release();
+            pickVideo();
+            return;
+        }
         mediaMetadataRetriever.release();
 
-        mDuration = Long.parseLong(duration);
-        mWidth = Integer.parseInt(width);
-        mHeight = Integer.parseInt(height);
-        mRotation = Integer.parseInt(rotation);
         mTimeFrom = 0;
-        mTimeTo = mDuration;
+        mTimeTo = duration;
+
+        // to fill image view with proper width/height until we get thumbnail
+        mThumbView.setImageBitmap(Bitmap.createScaledBitmap(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888),
+                rotation % 180 == 90 ? mHeight : mWidth, rotation % 180 == 90 ? mWidth : mHeight, false));
 
         mInputInfoView.setText(getString(R.string.video_info, width, height,
-                        DateUtils.formatElapsedTime(mDuration / 1000),
+                        DateUtils.formatElapsedTime(duration / 1000),
                         Formatter.formatShortFileSize(this, mInputFile.length())));
 
         mTimelineView.setVideoFile(mInputFile == null ? null : mInputFile.getAbsolutePath());
 
-        mRangeSeekBar.setMax((int)mDuration);
+        mRangeSeekBar.setMax((int) duration);
         mRangeSeekBar.setSeekBarChangeListener(new RangeSeekBar.SeekBarChangeListener() {
 
             @Override
@@ -400,6 +391,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mTimeView.setText("");
+
         estimateOutput();
     }
 
@@ -418,8 +411,7 @@ public class MainActivity extends AppCompatActivity {
         final long duration = (mTimeTo - mTimeFrom) / 1000;
         final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
 
-        mOutputInfoView.setText(getString(R.string.output_info, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
-
+        mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
     }
 
     private void pickVideo() {
@@ -431,22 +423,8 @@ public class MainActivity extends AppCompatActivity {
 
         final Intent pickIntent = new Intent(Intent.ACTION_PICK);
         pickIntent.setDataAndType(android.provider.MediaStore.Video.Media.INTERNAL_CONTENT_URI, "video/*");
-
         final Intent captureIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-
-        final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-        final File cameraFolder = new File(mOutputFolder, "Camera");
-        if (!cameraFolder.mkdirs()) {
-            Log.e(TAG, "cannot create " + cameraFolder);
-        }
-        mCaptureFile = new File(cameraFolder, "VID_" + dateFormat.format(new Date()) + ".mp4");
-
-        if (Build.VERSION.SDK_INT == 18 && Build.MODEL.contains("Nexus")) {
-            captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(mCaptureFile));
-        }
-
         final Intent reselectIntent = new Intent("com.dstukalov.videoconverter.intent.action.RESELECT", null);
-
         final Intent chooserIntent = Intent.createChooser(pickIntent, getString(R.string.select_video));
 
         if (mConverted) {
@@ -460,11 +438,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateButtons() {
         if (mInputFile == null) {
-            findViewById(R.id.main).setVisibility(View.INVISIBLE);
+            mMainLayout.setVisibility(View.INVISIBLE);
         } else {
-            findViewById(R.id.main).setVisibility(View.VISIBLE);
+            mMainLayout.setVisibility(View.VISIBLE);
             if (mConverted) {
-                mProgressBar.setVisibility(View.GONE);
+                mConversionProgressBar.setVisibility(View.GONE);
                 mRangeSeekBar.setVisibility(View.INVISIBLE);
                 mTimelineView.setVisibility(View.INVISIBLE);
                 mConvertButton.setText(R.string.convert);
@@ -473,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
                 mOutputPlayButton.setVisibility(View.VISIBLE);
                 mOutputSendButton.setVisibility(View.VISIBLE);
             } else if (mConversionTask == null) {
-                mProgressBar.setVisibility(View.GONE);
+                mConversionProgressBar.setVisibility(View.GONE);
                 mRangeSeekBar.setVisibility(View.VISIBLE);
                 mTimelineView.setVisibility(View.VISIBLE);
                 mConvertButton.setText(R.string.convert);
@@ -482,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
                 mOutputPlayButton.setVisibility(View.GONE);
                 mOutputSendButton.setVisibility(View.GONE);
             } else {
-                mProgressBar.setVisibility(View.VISIBLE);
+                mConversionProgressBar.setVisibility(View.VISIBLE);
                 mRangeSeekBar.setVisibility(View.GONE);
                 mTimelineView.setVisibility(View.VISIBLE);
                 mConvertButton.setText(R.string.cancel);
@@ -504,81 +482,100 @@ public class MainActivity extends AppCompatActivity {
         if (timeTo == mRangeSeekBar.getMax()) {
             timeTo = 0;
         }
-        mConversionTask = new ConversionTask(mInputFile, mOutputFile, timeFrom, timeTo, mConversionParameters);
-        mConversionTask.execute();
+        try {
+            mConversionTask = new ConversionTask(mInputFile, mOutputFile, timeFrom, timeTo, mConversionParameters);
+            mConversionTask.execute();
+        } catch (FileNotFoundException e) {
+            mConversionTask = null;
+            Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
+        }
     }
 
+    private void loadUri(final @NonNull Uri uri) {
+        mInputFile = null;
+        mMainLayout.setVisibility(View.INVISIBLE);
+        mLoadingProgressBar.setVisibility(View.VISIBLE);
+        new LoadUriTask(uri).execute();
+    }
 
-    private @Nullable String getFileFromUri(final @NonNull Uri uri) {
-        String filePath = null;
-        ContentResolver cr = getContentResolver();
-        if (cr != null) {
-            InputStream inputStream = null;
-            OutputStream outputStream = null;
-            try {
-                final File tmpFolder = new File(mOutputFolder, "Temp");
-                if (!tmpFolder.mkdirs()) {
-                    Log.e(TAG, "cannot create " + tmpFolder);
-                }
-                final File outFile = new File(tmpFolder, "tmp.mp4");
-                inputStream = cr.openInputStream(uri);
-                if (inputStream != null) {
-                    outputStream = new FileOutputStream(outFile);
-                    byte[] buffer = new byte[4096];
-                    int n;
-                    while ((n = inputStream.read(buffer, 0, buffer.length)) >= 0) {
-                        outputStream.write(buffer, 0, n);
+    private class LoadUriTask extends AsyncTask<Void, Void, File> {
+
+        final Uri mUri;
+
+        LoadUriTask(final @NonNull Uri uri) {
+            mUri = uri;
+        }
+
+        @Override
+        protected File doInBackground(Void... voids) {
+            File outFile = null;
+            ContentResolver cr = getContentResolver();
+            if (cr != null) {
+                InputStream inputStream = null;
+                OutputStream outputStream = null;
+                try {
+                    final File tmpFolder = new File(mOutputFolder, "Temp");
+                    if (!tmpFolder.mkdirs()) {
+                        Log.e(TAG, "cannot create " + tmpFolder);
                     }
-                    filePath = outFile.getAbsolutePath();
-                }
-            } catch (SecurityException | IOException e) {
-                Log.w("Unable to open stream", e);
-            } finally {
-                if (inputStream != null) {
-                    try {
-                        inputStream.close();
-                    } catch (IOException e) {
-                        Log.w("Unable to close stream", e);
+                    outFile = new File(tmpFolder, "tmp.mp4");
+                    inputStream = cr.openInputStream(mUri);
+                    if (inputStream != null) {
+                        outputStream = new FileOutputStream(outFile);
+                        byte[] buffer = new byte[4096];
+                        int n;
+                        while ((n = inputStream.read(buffer, 0, buffer.length)) >= 0) {
+                            outputStream.write(buffer, 0, n);
+                        }
                     }
-                }
-                if (outputStream != null) {
-                    try {
-                        outputStream.close();
-                    } catch (IOException e) {
-                        Log.w("Unable to close stream", e);
+                } catch (SecurityException | IOException e) {
+                    Log.w(TAG, "Unable to open stream", e);
+                    outFile = null;
+                } finally {
+                    if (inputStream != null) {
+                        try {
+                            inputStream.close();
+                        } catch (IOException e) {
+                            Log.w(TAG, "Unable to close stream", e);
+                        }
+                    }
+                    if (outputStream != null) {
+                        try {
+                            outputStream.close();
+                        } catch (IOException e) {
+                            Log.w(TAG, "Unable to close stream", e);
+                        }
                     }
                 }
             }
+            return outFile;
         }
-        return filePath;
-    }
 
-    private static Bitmap getVideoThumb(final String filePath, final long timeUs) {
-        final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-        try {
-            mediaMetadataRetriever.setDataSource(filePath);
-            return mediaMetadataRetriever.getFrameAtTime(timeUs);
-        } catch (RuntimeException e) {
-            Log.e(TAG, e.toString());
-        } finally {
-            mediaMetadataRetriever.release();
+        @Override
+        protected void onPostExecute(final File file) {
+            mLoadingProgressBar.setVisibility(View.GONE);
+            mInputFile = file;
+            mOutputFile = null;
+            mConverted = false;
+            updateButtons();
+            initInputData();
         }
-        return null;
     }
-
 
     private class ConversionTask extends AsyncTask<Void, Integer, Boolean> {
 
         final MediaConverter mConverter;
         long mStartTime;
+        WakeLock mWakeLock;
 
-        ConversionTask(final File input, final File output, final long timeFrom, final long timeTo, final ConversionParameters conversionParameters) {
+        ConversionTask(final @NonNull File input, final @NonNull File output, final long timeFrom, final long timeTo, final @NonNull ConversionParameters conversionParameters) throws FileNotFoundException {
 
             mConverter = new MediaConverter();
             mConverter.setInput(input);
             mConverter.setOutput(output);
             mConverter.setTimeRange(timeFrom, timeTo);
             mConverter.setVideoResolution(conversionParameters.mVideoResolution);
+            mConverter.setVideoCodec(conversionParameters.mVideoCodec);
             mConverter.setVideoBitrate(conversionParameters.mVideoBitrate);
             mConverter.setAudioBitrate(conversionParameters.mAudioBitrate);
 
@@ -586,6 +583,9 @@ public class MainActivity extends AppCompatActivity {
                 publishProgress(percent);
                 return isCancelled();
             });
+
+            final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VideoConverter:convert");
         }
 
         @Override
@@ -604,18 +604,18 @@ public class MainActivity extends AppCompatActivity {
 
         protected void onProgressUpdate(Integer... values) {
             final Integer progress = values[0];
-            mProgressBar.setIndeterminate(progress >= 100);
-            mProgressBar.setProgress(progress);
+            mConversionProgressBar.setIndeterminate(progress >= 100);
+            mConversionProgressBar.setProgress(progress);
             mTimeView.setText(getString(R.string.seconds_elapsed, (System.currentTimeMillis() - mStartTime) / 1000));
         }
 
         protected void onPreExecute() {
             mStartTime = System.currentTimeMillis();
-            mProgressBar.setVisibility(View.VISIBLE);
-            mProgressBar.setIndeterminate(true);
-            mProgressBar.setProgress(0);
+            mConversionProgressBar.setVisibility(View.VISIBLE);
+            mConversionProgressBar.setIndeterminate(true);
+            mConversionProgressBar.setProgress(0);
             mRangeSeekBar.setVisibility(View.INVISIBLE);
-            mWakeLock.acquire();
+            mWakeLock.acquire(10*60*1000L /*10 minutes*/);
         }
 
         protected void onCancelled() {
@@ -663,17 +663,27 @@ public class MainActivity extends AppCompatActivity {
 
     private class PreviewThread extends Thread {
 
+        private final String mFilePath;
         private long mFrameTime = -1;
         private final Object mLock = new Object();
+        private final AtomicBoolean running = new AtomicBoolean(true);
+
+
+        PreviewThread(final @NonNull String filePath) {
+            mFilePath = filePath;
+        }
 
         void requestShowFrame(final long frameTime) {
             synchronized (mLock) {
+                Log.i(TAG, "video-thumbnails REQUEST FRAME AT " + frameTime);
                 this.mFrameTime = frameTime;
                 mLock.notifyAll();
             }
         }
 
         public void run() {
+            final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+            mediaMetadataRetriever.setDataSource(mFilePath);
             try {
                 long lastFrameTime = -1;
 
@@ -687,24 +697,34 @@ public class MainActivity extends AppCompatActivity {
                         lastFrameTime = mFrameTime;
                     }
 
-                    final Bitmap bitmap = getVideoThumb(mInputFile.getAbsolutePath(), lastFrameTime * 1000);
+                    final Bitmap bitmap = mediaMetadataRetriever.getFrameAtTime(lastFrameTime * 1000);
                     if (bitmap != null) {
-                        MainActivity.this.runOnUiThread(() -> mThumbView.setImageBitmap(bitmap));
+                        Log.i(TAG, "video-thumbnails GOT FRAME AT " + mFrameTime);
+                        MainActivity.this.runOnUiThread(() -> {
+                            if (running.get()) {
+                                mThumbView.setImageBitmap(bitmap);
+                            }
+                        });
                     }
                 }
+
             } catch (InterruptedException e) {
                 //allow thread to exit
             }
+            running.set(false);
+            mediaMetadataRetriever.release();
         }
     }
 
     private static class ConversionParameters {
         final int mVideoResolution;
+        final @MediaConverter.VideoCodec String mVideoCodec;
         final int mVideoBitrate;
         final int mAudioBitrate;
 
-        ConversionParameters(final int videoResolution, final int videoBitrate, final int audioBitrate) {
+        ConversionParameters(final int videoResolution, final @MediaConverter.VideoCodec String videoCodec, final int videoBitrate, final int audioBitrate) {
             mVideoResolution = videoResolution;
+            mVideoCodec = videoCodec;
             mVideoBitrate = videoBitrate;
             mAudioBitrate = audioBitrate;
         }

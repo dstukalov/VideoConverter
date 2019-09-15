@@ -1,20 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
-
-    <TextView
-        android:id="@+id/transcoding_not_supported"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:padding="48dp"
-        android:text="@string/conversion_not_supported"
-        android:textSize="16sp"
-        android:visibility="gone" />
+    android:layout_height="match_parent">
 
     <com.dstukalov.videoconverterdemo.MainLayout
         android:id="@+id/main"
@@ -226,4 +215,11 @@
         </LinearLayout>
     </com.dstukalov.videoconverterdemo.MainLayout>
 
-</LinearLayout>
+    <ProgressBar
+        android:id="@+id/loading_progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+
+</FrameLayout>

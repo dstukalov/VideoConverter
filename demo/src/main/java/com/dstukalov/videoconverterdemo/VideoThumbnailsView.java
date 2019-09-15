@@ -45,7 +45,7 @@ public class VideoThumbnailsView extends View {
     }
 
     @TargetApi(21)
-    public VideoThumbnailsView(final Context context, final AttributeSet attrs, final int defStyleAttr, final int defStyleRes) {
+    public VideoThumbnailsView(final Context context, final @Nullable AttributeSet attrs, final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
