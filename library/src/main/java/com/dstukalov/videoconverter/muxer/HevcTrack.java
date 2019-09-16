@@ -97,10 +97,11 @@ public class HevcTrack extends AbstractStreamingTrack implements H265NalUnitType
     void consumeNal(final @NonNull ByteBuffer nal, final long presentationTimeUs) throws IOException {
 
         final H265NalUnitHeader unitHeader = getNalUnitHeader(nal);
+        final boolean isVcl = isVcl(unitHeader);
         //
         if (vclNalUnitSeenInAU) { // we need at least 1 VCL per AU
             // This branch checks if we encountered the start of a samples/AU
-            if (isVcl(unitHeader)) {
+            if (isVcl) {
                 if ((nal.get(2) & -128) != 0) { // this is: first_slice_segment_in_pic_flag  u(1)
                     wrapUp(bufferedNals, presentationTimeUs);
                 }
@@ -145,13 +146,13 @@ public class HevcTrack extends AbstractStreamingTrack implements H265NalUnitType
                 break;
             default:
                 bufferedNals.add(nal);
+                break;
         }
 
-        if (isVcl(unitHeader)) {
+        if (isVcl) {
             isIdr = unitHeader.nalUnitType == NAL_TYPE_IDR_W_RADL || unitHeader.nalUnitType == NAL_TYPE_IDR_N_LP;
+            vclNalUnitSeenInAU = true;
         }
-
-        vclNalUnitSeenInAU |= isVcl(unitHeader);
     }
 
     private void wrapUp(final @NonNull List<ByteBuffer> nals, final long presentationTimeUs) throws IOException {
