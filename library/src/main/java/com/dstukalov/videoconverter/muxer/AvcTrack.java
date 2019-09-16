@@ -206,14 +206,6 @@ public class AvcTrack extends AbstractStreamingTrack {
                 break;
 
             case H264NalUnitTypes.SEI:
-                if (fvnd != null) {
-                    pushSample(createSample(bufferedNals, fvnd.sliceHeader, sliceNalUnitHeader, presentationTimeUs - currentPresentationTimeUs), false, false);
-                    bufferedNals.clear();
-                    fvnd = null;
-                }
-                bufferedNals.add(nal);
-                break;
-
             case H264NalUnitTypes.AU_UNIT_DELIMITER:
                 if (fvnd != null) {
                     pushSample(createSample(bufferedNals, fvnd.sliceHeader, sliceNalUnitHeader, presentationTimeUs - currentPresentationTimeUs), false, false);
