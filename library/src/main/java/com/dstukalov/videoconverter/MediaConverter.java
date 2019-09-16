@@ -143,6 +143,10 @@ public class MediaConverter {
         mListener = listener;
     }
 
+    public Muxer createMuxer() throws IOException {
+        return mOutput.createMuxer();
+    }
+
     @WorkerThread
     public void convert() throws BadMediaException, IOException, MediaConversionException {
         // Exception that may be thrown during release.
@@ -160,7 +164,7 @@ public class MediaConverter {
                 throw new BadMediaException();
             }
 
-            muxer = mOutput.createMuxer();
+            muxer = createMuxer();
 
             doExtractDecodeEditEncodeMux(
                     videoTrackConverter,
