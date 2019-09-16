@@ -666,7 +666,7 @@ public class MainActivity extends AppCompatActivity {
         private final String mFilePath;
         private long mFrameTime = -1;
         private final Object mLock = new Object();
-        private final AtomicBoolean running = new AtomicBoolean(true);
+        private final AtomicBoolean mRunning = new AtomicBoolean(true);
 
 
         PreviewThread(final @NonNull String filePath) {
@@ -701,7 +701,7 @@ public class MainActivity extends AppCompatActivity {
                     if (bitmap != null) {
                         Log.i(TAG, "video-thumbnails GOT FRAME AT " + mFrameTime);
                         MainActivity.this.runOnUiThread(() -> {
-                            if (running.get()) {
+                            if (mRunning.get()) {
                                 mThumbView.setImageBitmap(bitmap);
                             }
                         });
@@ -711,7 +711,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (InterruptedException e) {
                 //allow thread to exit
             }
-            running.set(false);
+            mRunning.set(false);
             mediaMetadataRetriever.release();
         }
     }
