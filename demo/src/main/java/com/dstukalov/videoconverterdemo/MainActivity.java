@@ -297,6 +297,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void initInputData() {
 
+        if (mInputFile == null) {
+            return;
+        }
         if (mPreviewThread != null) {
             mPreviewThread.interrupt();
             mPreviewThread = null;
