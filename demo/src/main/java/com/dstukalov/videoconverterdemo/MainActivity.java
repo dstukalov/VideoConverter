@@ -25,6 +25,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
@@ -69,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private View mOutputSendButton;
     private View mOutputOptionsButton;
 
-    private PreviewThread mPreviewThread;
+    private @Nullable PreviewThread mPreviewThread;
 
     private ConversionTask mConversionTask;
     private boolean mConverted;
@@ -304,10 +305,6 @@ public class MainActivity extends AppCompatActivity {
             mPreviewThread.interrupt();
             mPreviewThread = null;
         }
-        mPreviewThread = new PreviewThread(mInputFile.getAbsolutePath());
-        mPreviewThread.setPriority(Thread.NORM_PRIORITY - 1);
-        mPreviewThread.start();
-        mPreviewThread.requestShowFrame(0);
 
         final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
 
@@ -336,6 +333,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         mediaMetadataRetriever.release();
+
+        mPreviewThread = new PreviewThread(mInputFile.getAbsolutePath());
+        mPreviewThread.setPriority(Thread.NORM_PRIORITY - 1);
+        mPreviewThread.start();
+        mPreviewThread.requestShowFrame(0);
 
         mTimeFrom = 0;
         mTimeTo = duration;
@@ -369,10 +371,12 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onValueChanged(int minValue, int maxValue) {
-                if (mTimeFrom != minValue) {
-                    mPreviewThread.requestShowFrame(minValue);
-                } else if (mTimeTo != maxValue) {
-                    mPreviewThread.requestShowFrame(maxValue);
+                if (mPreviewThread != null) {
+                    if (mTimeFrom != minValue) {
+                        mPreviewThread.requestShowFrame(minValue);
+                    } else if (mTimeTo != maxValue) {
+                        mPreviewThread.requestShowFrame(maxValue);
+                    }
                 }
 
                 mTimeFrom = minValue;
@@ -597,7 +601,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 mConverter.convert();
             } catch (BadMediaException | IOException | MediaConversionException e) {
-                Log.e(TAG, "failed to convert: " + e.toString());
+                Log.e(TAG, "failed to convert: " + e.toString(), e);
                 return Boolean.FALSE;
             }
 
@@ -686,7 +690,11 @@ public class MainActivity extends AppCompatActivity {
 
         public void run() {
             final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-            mediaMetadataRetriever.setDataSource(mFilePath);
+            try {
+                mediaMetadataRetriever.setDataSource(mFilePath);
+            } catch (Exception ex) {
+                return;
+            }
             try {
                 long lastFrameTime = -1;
 
