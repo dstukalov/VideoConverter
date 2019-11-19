@@ -231,6 +231,9 @@ public class MainActivity extends AppCompatActivity {
                 if (result == Activity.RESULT_OK) {
                     if (data == null) {
                         Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+                        if (mInputFile == null) {
+                            pickVideo();
+                        }
                     } else if (data.getBooleanExtra(ReselectActivity.RESELECT_EXTRA, false)) {
                         mOutputFile = null;
                         mConverted = false;
@@ -242,6 +245,9 @@ public class MainActivity extends AppCompatActivity {
                             loadUri(uri);
                         } else {
                             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+                            if (mInputFile == null) {
+                                pickVideo();
+                            }
                         }
                     }
                 } else {
@@ -313,6 +319,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ex) {
             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
             mediaMetadataRetriever.release();
+            mInputFile = null;
+            updateButtons();
             pickVideo();
             return;
         }
@@ -329,6 +337,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (NumberFormatException e) {
             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
             mediaMetadataRetriever.release();
+            mInputFile = null;
+            updateButtons();
             pickVideo();
             return;
         }
@@ -561,11 +571,16 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(final File file) {
             mLoadingProgressBar.setVisibility(View.GONE);
-            mInputFile = file;
-            mOutputFile = null;
-            mConverted = false;
-            updateButtons();
-            initInputData();
+            if (file != null) {
+                mInputFile = file;
+                mOutputFile = null;
+                mConverted = false;
+                updateButtons();
+                initInputData();
+            } else {
+                Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+                pickVideo();
+            }
         }
     }
 
