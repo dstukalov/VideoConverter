@@ -103,6 +103,7 @@ class AudioTrackConverter {
                         inputAudioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
         outputAudioFormat.setInteger(MediaFormat.KEY_BIT_RATE, audioBitrate);
         outputAudioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, OUTPUT_AUDIO_AAC_PROFILE);
+        outputAudioFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384);
 
         // Create a MediaCodec for the desired codec, then configure it as an encoder with
         // our desired properties. Request a Surface to use for input.
