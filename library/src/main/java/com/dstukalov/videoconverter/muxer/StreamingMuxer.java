@@ -83,13 +83,19 @@ public class StreamingMuxer implements Muxer {
 
     static class MediaCodecAvcTrack extends AvcTrack implements MediaCodecTrack {
 
+        int keyFrameHeaderSize;
+
         MediaCodecAvcTrack(@NonNull MediaFormat format) {
             super(Utils.subBuffer(format.getByteBuffer("csd-0"), 4), Utils.subBuffer(format.getByteBuffer("csd-1"), 4));
+            if (format.containsKey(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES) && format.getInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES) == 1) {
+                keyFrameHeaderSize = format.getByteBuffer("csd-0").limit() + format.getByteBuffer("csd-1").limit();
+            }
         }
 
         @Override
         public void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
-            consumeNal(Utils.subBuffer(byteBuf, bufferInfo.offset + 4, bufferInfo.size - 4), bufferInfo.presentationTimeUs);
+            final int headerSize = ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) == 0) ? 0 : keyFrameHeaderSize;
+            consumeNal(Utils.subBuffer(byteBuf, bufferInfo.offset + 4 + headerSize, bufferInfo.size - 4 - headerSize), bufferInfo.presentationTimeUs);
         }
 
         @Override
@@ -100,13 +106,19 @@ public class StreamingMuxer implements Muxer {
 
     static class MediaCodecHevcTrack extends HevcTrack implements MediaCodecTrack {
 
+        int keyFrameHeaderSize;
+
         MediaCodecHevcTrack(@NonNull MediaFormat format) throws IOException {
             super(Utils.getNals(format.getByteBuffer("csd-0")));
+            if (format.containsKey(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES) && format.getInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES) == 1) {
+                keyFrameHeaderSize = format.getByteBuffer("csd-0").limit();
+            }
         }
 
         @Override
         public void writeSampleData(@NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
-            consumeNal(Utils.subBuffer(byteBuf, 4), bufferInfo.presentationTimeUs);
+            final int headerSize = ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) == 0) ? 0 : keyFrameHeaderSize;
+            consumeNal(Utils.subBuffer(byteBuf, 4 + headerSize), bufferInfo.presentationTimeUs);
         }
 
         @Override
