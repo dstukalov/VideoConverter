@@ -5,6 +5,8 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -33,6 +35,7 @@ import androidx.core.content.FileProvider;
 import com.dstukalov.videoconverter.BadMediaException;
 import com.dstukalov.videoconverter.MediaConversionException;
 import com.dstukalov.videoconverter.MediaConverter;
+import com.dstukalov.videoconverter.Muxer;
 import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
@@ -41,6 +44,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -357,8 +362,8 @@ public class MainActivity extends AppCompatActivity {
                 rotation % 180 == 90 ? mHeight : mWidth, rotation % 180 == 90 ? mWidth : mHeight, false));
 
         mInputInfoView.setText(getString(R.string.video_info, width, height,
-                        DateUtils.formatElapsedTime(duration / 1000),
-                        Formatter.formatShortFileSize(this, mInputFile.length())));
+                DateUtils.formatElapsedTime(duration / 1000),
+                Formatter.formatShortFileSize(this, mInputFile.length())));
 
         mTimelineView.setVideoFile(mInputFile == null ? null : mInputFile.getAbsolutePath());
 
@@ -592,9 +597,64 @@ public class MainActivity extends AppCompatActivity {
 
         ConversionTask(final @NonNull File input, final @NonNull File output, final long timeFrom, final long timeTo, final @NonNull ConversionParameters conversionParameters) throws FileNotFoundException {
 
-            mConverter = new MediaConverter();
+            mConverter = new MediaConverter() {
+
+                final String TAG = "H264";
+
+                public Muxer createMuxer() throws IOException {
+                    final Muxer muxer = super.createMuxer();
+                    final FileOutputStream h264OutputStream = new FileOutputStream(output.getAbsolutePath() + ".h264");
+                    final WritableByteChannel h264OutputChannel = h264OutputStream.getChannel();
+                    return new Muxer() {
+
+                        int h264TrackIndex = -1;
+                        int frameNum;
+
+                        @Override
+                        public void start() throws IOException {
+                            muxer.start();
+                        }
+
+                        @Override
+                        public void stop() throws IOException {
+                            muxer.stop();
+                        }
+
+                        @Override
+                        public int addTrack(@NonNull MediaFormat format) throws IOException {
+                            int trackIndex = muxer.addTrack(format);
+                            final String mime = format.getString(MediaFormat.KEY_MIME);
+                            if ("video/avc".equals(mime)) {
+                                final ByteBuffer csd0 = format.getByteBuffer("csd-0");
+                                final ByteBuffer csd1 = format.getByteBuffer("csd-1");
+                                Log.i(TAG, "csd-0.position:" + csd0.position() + " remaining:" + csd0.remaining());
+                                Log.i(TAG, "csd-1.position:" + csd1.position() + " remaining:" + csd1.remaining());
+                                h264OutputChannel.write(csd0);
+                                h264OutputChannel.write(csd1);
+                                h264TrackIndex = trackIndex;
+                            }
+                            return trackIndex;
+                        }
+
+                        @Override
+                        public void writeSampleData(int trackIndex, @NonNull ByteBuffer byteBuf, @NonNull MediaCodec.BufferInfo bufferInfo) throws IOException {
+                            if (h264TrackIndex == trackIndex) {
+                                Log.i(TAG, "frame " + (frameNum++) + " buffer.position:" + byteBuf.position() + " buffer.remaining:" + byteBuf.remaining() + " flags:" + bufferInfo.flags + " offset:" + bufferInfo.offset + " size:" + bufferInfo.size);
+                                h264OutputChannel.write(byteBuf);
+                            }
+                            muxer.writeSampleData(trackIndex, byteBuf, bufferInfo);
+                        }
+
+                        @Override
+                        public void release() {
+                            muxer.release();
+                        }
+                    };
+                }
+            };
             mConverter.setInput(input);
-            mConverter.setOutput(output);
+            //mConverter.setOutput(output);
+            mConverter.setOutput(new FileOutputStream(output));
             mConverter.setTimeRange(timeFrom, timeTo);
             mConverter.setVideoResolution(conversionParameters.mVideoResolution);
             mConverter.setVideoCodec(conversionParameters.mVideoCodec);
