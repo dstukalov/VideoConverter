@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 public class Preconditions {
 
-    public static @NonNull <T extends Object> T checkNotNull(T reference) {
+    public static @NonNull <T> T checkNotNull(T reference) {
         if (reference == null) {
             throw new NullPointerException();
         }

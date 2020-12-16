@@ -2,6 +2,8 @@ package com.dstukalov.videoconverter.muxer;
 
 import android.util.SparseIntArray;
 
+import androidx.annotation.NonNull;
+
 import org.mp4parser.boxes.iso14496.part1.objectdescriptors.AudioSpecificConfig;
 import org.mp4parser.boxes.iso14496.part1.objectdescriptors.DecoderConfigDescriptor;
 import org.mp4parser.boxes.iso14496.part1.objectdescriptors.ESDescriptor;
@@ -35,8 +37,7 @@ public class AacTrack extends AbstractStreamingTrack {
     }
 
     private final SampleDescriptionBox stsd;
-
-    private int sampleRate;
+    private final int sampleRate;
 
     AacTrack(long avgBitrate, long maxBitrate, int sampleRate, int channelCount, int aacProfile) {
         this.sampleRate = sampleRate;
@@ -62,7 +63,7 @@ public class AacTrack extends AbstractStreamingTrack {
 
 
         final ESDescriptorBox esds = new ESDescriptorBox();
-        ESDescriptor descriptor = new ESDescriptor();
+        final ESDescriptor descriptor = new ESDescriptor();
         descriptor.setEsId(0);
 
         final SLConfigDescriptor slConfigDescriptor = new SLConfigDescriptor();
@@ -109,7 +110,7 @@ public class AacTrack extends AbstractStreamingTrack {
     public void close() {
     }
 
-    void processSample(ByteBuffer frame) throws IOException {
+    void processSample(@NonNull ByteBuffer frame) throws IOException {
         sampleSink.acceptSample(new StreamingSampleImpl(frame, 1024), this);
     }
 }

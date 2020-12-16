@@ -14,7 +14,7 @@ import java.nio.ByteBuffer;
 
 public class AndroidMuxer implements Muxer {
 
-    private MediaMuxer muxer;
+    private final MediaMuxer muxer;
 
     AndroidMuxer(final @NonNull File file) throws IOException {
         muxer = new MediaMuxer(file.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);

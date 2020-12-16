@@ -6,6 +6,7 @@ import android.media.MediaFormat;
 import androidx.annotation.NonNull;
 
 import com.dstukalov.videoconverter.Muxer;
+import com.dstukalov.videoconverter.Preconditions;
 
 import org.mp4parser.streaming.StreamingTrack;
 
@@ -49,9 +50,8 @@ public class StreamingMuxer implements Muxer {
 
     @Override
     public int addTrack(@NonNull MediaFormat format) throws IOException {
-
         final String mime = format.getString(MediaFormat.KEY_MIME);
-        switch (mime) {
+        switch (Preconditions.checkNotNull(mime)) {
             case "video/avc":
                 tracks.add(new MediaCodecAvcTrack(format));
                 break;
@@ -84,7 +84,8 @@ public class StreamingMuxer implements Muxer {
     static class MediaCodecAvcTrack extends AvcTrack implements MediaCodecTrack {
 
         MediaCodecAvcTrack(@NonNull MediaFormat format) {
-            super(Utils.subBuffer(format.getByteBuffer("csd-0"), 4), Utils.subBuffer(format.getByteBuffer("csd-1"), 4));
+            super(Utils.subBuffer(Preconditions.checkNotNull(format.getByteBuffer("csd-0")), 4),
+                    Utils.subBuffer(Preconditions.checkNotNull(format.getByteBuffer("csd-1")), 4));
         }
 
         @Override
@@ -104,7 +105,7 @@ public class StreamingMuxer implements Muxer {
     static class MediaCodecHevcTrack extends HevcTrack implements MediaCodecTrack {
 
         MediaCodecHevcTrack(@NonNull MediaFormat format) throws IOException {
-            super(Utils.getNals(format.getByteBuffer("csd-0")));
+            super(Utils.getNals(Preconditions.checkNotNull(format.getByteBuffer("csd-0"))));
         }
 
         @Override

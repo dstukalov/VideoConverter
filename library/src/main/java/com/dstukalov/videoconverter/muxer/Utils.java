@@ -15,14 +15,14 @@ import java.util.List;
 
 class Utils {
 
-    static byte[] toArray(final @NonNull ByteBuffer buf) {
+    static @NonNull byte[] toArray(final @NonNull ByteBuffer buf) {
         final ByteBuffer newBuf = buf.duplicate();
         byte[] bytes = new byte[newBuf.remaining()];
         newBuf.get(bytes, 0, bytes.length);
         return bytes;
     }
 
-    public static ByteBuffer clone(final @NonNull ByteBuffer original) {
+    public static @NonNull ByteBuffer clone(final @NonNull ByteBuffer original) {
         final ByteBuffer clone = ByteBuffer.allocate(original.capacity());
         original.rewind();
         clone.put(original);
@@ -43,7 +43,7 @@ class Utils {
         return ByteBuffer.wrap(bytes);
     }
 
-    static @NonNull List<ByteBuffer> getNals(ByteBuffer buffer) {
+    static @NonNull List<ByteBuffer> getNals(final @NonNull ByteBuffer buffer) {
         final List<ByteBuffer> nals = new ArrayList<>();
         ByteBuffer nal;
         while ((nal = nextNALUnit(buffer)) != null) {
@@ -52,15 +52,15 @@ class Utils {
         return nals;
     }
 
-    public static ByteBuffer nextNALUnit(ByteBuffer buf) {
+    public static @Nullable ByteBuffer nextNALUnit(final @NonNull ByteBuffer buf) {
         skipToNALUnit(buf);
         return gotoNALUnit(buf);
     }
 
-    public static final void skipToNALUnit(ByteBuffer buf) {
-        if (!buf.hasRemaining())
+    public static void skipToNALUnit(final @NonNull ByteBuffer buf) {
+        if (!buf.hasRemaining()) {
             return;
-
+        }
         int val = 0xffffffff;
         while (buf.hasRemaining()) {
             val <<= 8;
@@ -83,11 +83,10 @@ class Utils {
      * @param buf
      * @return
      */
-    public static final ByteBuffer gotoNALUnit(ByteBuffer buf) {
-
-        if (!buf.hasRemaining())
+    public static @Nullable ByteBuffer gotoNALUnit(final @NonNull ByteBuffer buf) {
+        if (!buf.hasRemaining()) {
             return null;
-
+        }
         int from = buf.position();
         ByteBuffer result = buf.slice();
         result.order(ByteOrder.BIG_ENDIAN);
