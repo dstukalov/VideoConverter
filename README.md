@@ -9,7 +9,7 @@ Video file conversion library based on <a href="https://android.googlesource.com
 VideoConverter is installed by adding the following dependency to your build.gradle file:
 ```groovy
 dependencies {
-    implementation 'com.dstukalov:videoconverter:1.7'
+    implementation 'com.dstukalov:videoconverter:1.8'
 }
 ```
 
