@@ -594,8 +594,7 @@ public class MainActivity extends AppCompatActivity {
 
             mConverter = new MediaConverter();
             mConverter.setInput(input);
-            //mConverter.setOutput(output);
-            mConverter.setOutput(new FileOutputStream(output));
+            mConverter.setOutput(output);
             mConverter.setTimeRange(timeFrom, timeTo);
             mConverter.setVideoResolution(conversionParameters.mVideoResolution);
             mConverter.setVideoCodec(conversionParameters.mVideoCodec);
