@@ -78,7 +78,7 @@ public class VideoThumbnailsView extends View {
             return;
         }
 
-        mTmpDrawRect.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getBottom() - getPaddingBottom());
+        mTmpDrawRect.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
 
         if (!mDrawRect.equals(mTmpDrawRect)) {
             mDrawRect.set(mTmpDrawRect);
@@ -110,7 +110,7 @@ public class VideoThumbnailsView extends View {
                 final Bitmap thumbnailBitmap = mThumbnails.get(i);
                 if (thumbnailBitmap != null) {
                     canvas.save();
-                    canvas.rotate(180, mTmpRect.centerX(), mTmpRect.centerY());
+                    canvas.scale(1, -1, mTmpRect.centerX(), mTmpRect.centerY());
                     mTmpDrawRect.set(0, 0, thumbnailBitmap.getWidth(), thumbnailBitmap.getHeight());
                     if (mTmpDrawRect.width() * thumbnailHeight > mTmpDrawRect.height() * thumbnailWidth) {
                         float w = mTmpDrawRect.height() * thumbnailWidth / thumbnailHeight;
