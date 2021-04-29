@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
     private static final ConversionParameters CONV_PARAMS_720P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  2000000, 192000);
     private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
