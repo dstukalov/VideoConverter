@@ -214,9 +214,9 @@ class VideoTrackConverter {
                         size,
                         presentationTime,
                         mVideoExtractor.getSampleFlags());
+                mVideoExtractor.advance();
+                mVideoExtractedFrameCount++;
             }
-            mVideoExtractor.advance();
-            mVideoExtractedFrameCount++;
             // We extracted a frame, let's try something else next.
             break;
         }
@@ -272,13 +272,13 @@ class VideoTrackConverter {
                 if (VERBOSE) Log.d(TAG, "input surface: swap buffers");
                 mInputSurface.swapBuffers();
                 if (VERBOSE) Log.d(TAG, "video encoder: notified of new frame");
+                mVideoDecodedFrameCount++;
             }
             if ((mVideoDecoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 if (VERBOSE) Log.d(TAG, "video decoder: EOS");
                 mVideoDecoderDone = true;
                 mVideoEncoder.signalEndOfInputStream();
             }
-            mVideoDecodedFrameCount++;
             // We extracted a pending frame, let's try something else next.
             break;
         }
@@ -325,13 +325,13 @@ class VideoTrackConverter {
             if (mVideoEncoderOutputBufferInfo.size != 0) {
                 mMuxer.writeSampleData(mOutputVideoTrack, encoderOutputBuffer, mVideoEncoderOutputBufferInfo);
                 mMuxingVideoPresentationTime = Math.max(mMuxingVideoPresentationTime, mVideoEncoderOutputBufferInfo.presentationTimeUs);
+                mVideoEncodedFrameCount++;
             }
             if ((mVideoEncoderOutputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 if (VERBOSE) Log.d(TAG, "video encoder: EOS");
                 mVideoEncoderDone = true;
             }
             mVideoEncoder.releaseOutputBuffer(encoderOutputBufferIndex, false);
-            mVideoEncodedFrameCount++;
             // We enqueued an encoded frame, let's try something else next.
             break;
         }
@@ -408,8 +408,9 @@ class VideoTrackConverter {
     }
 
     void verifyEndState() {
-        Preconditions.checkState("encoded (" + mVideoEncodedFrameCount + ") and decoded (" + mVideoDecodedFrameCount + ") video frame counts should match", mVideoDecodedFrameCount == mVideoEncodedFrameCount);
-        Preconditions.checkState("decoded frame count should be less than extracted frame count", mVideoDecodedFrameCount <= mVideoExtractedFrameCount);
+        Log.i(TAG, "extracted " + mVideoExtractedFrameCount + " frames; decoded " + mVideoDecodedFrameCount + " frames; encoded " + mVideoEncodedFrameCount + " frames");
+        Preconditions.checkState("encoded (" + mVideoEncodedFrameCount + ") and decoded (" + mVideoDecodedFrameCount + ") video frame counts should match", mVideoDecodedFrameCount >= mVideoEncodedFrameCount);
+        Preconditions.checkState("decoded )" + mVideoDecodedFrameCount + ") frame count should be less than extracted (" + mVideoExtractedFrameCount + ") frame count", mVideoDecodedFrameCount <= mVideoExtractedFrameCount);
     }
 
     private static String createFragmentShader(
