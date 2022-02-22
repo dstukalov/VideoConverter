@@ -164,7 +164,12 @@ class VideoTrackConverter {
 
         if (mTimeFrom > 0) {
             mVideoExtractor.seekTo(mTimeFrom * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            Log.i(TAG, "Seek video:" + mTimeFrom + " " + mVideoExtractor.getSampleTime());
+            Log.i(TAG, "Seek video to " + mTimeFrom + ", actual:" + mVideoExtractor.getSampleTime());
+            if (mVideoExtractor.getSampleTime() > mTimeFrom * 1000) {
+                // on some old systems seek to previous doesn't work well, looks like it seeks to next or closest
+                mVideoExtractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                Log.w(TAG, "Seek video to beginning, actual:" + mVideoExtractor.getSampleTime());
+            }
         }
     }
 

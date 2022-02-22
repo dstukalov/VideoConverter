@@ -120,7 +120,12 @@ class AudioTrackConverter {
 
         if (mTimeFrom > 0) {
             mAudioExtractor.seekTo(mTimeFrom * 1000, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            Log.i(TAG, "Seek audio:" + mTimeFrom + " " + mAudioExtractor.getSampleTime());
+            Log.i(TAG, "Seek audio to " + mTimeFrom + ", actual:" + mAudioExtractor.getSampleTime());
+            if (mAudioExtractor.getSampleTime() > mTimeFrom * 1000) {
+                // on some old systems seek to previous doesn't work well, looks like it seeks to next or closest
+                mAudioExtractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                Log.w(TAG, "Seek audio to beginning, actual:" + mAudioExtractor.getSampleTime());
+            }
         }
     }
 
