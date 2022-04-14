@@ -3,11 +3,6 @@ package com.dstukalov.videoconverter.muxer;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.mp4parser.muxer.MemoryDataSourceImpl;
-import org.mp4parser.muxer.tracks.AbstractH26XTrack;
-
-import java.io.EOFException;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
