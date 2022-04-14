@@ -248,7 +248,7 @@ public class HevcTrack extends AbstractStreamingTrack implements H265NalUnitType
             ppsArray.nalUnits.add(Utils.toArray(pp));
         }
 
-        hevcConfigurationBox.getArrays().addAll(Arrays.asList(spsArray, vpsArray, ppsArray));
+        hevcConfigurationBox.getArrays().addAll(Arrays.asList(vpsArray, spsArray, ppsArray));
 
         visualSampleEntry.addBox(hevcConfigurationBox);
         return visualSampleEntry;
