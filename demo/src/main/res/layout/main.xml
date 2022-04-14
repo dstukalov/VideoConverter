@@ -47,46 +47,39 @@
             android:paddingBottom="16dp"
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
-            android:paddingTop="4dp" >
-
-            <com.dstukalov.videoconverterdemo.VideoThumbnailsView
-                android:id="@+id/video_thumbnails"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:paddingLeft="8dp"
-                android:paddingRight="8dp"
-                android:paddingTop="8dp"
-                tools:background="#ff0000"/>
+            android:paddingTop="16dp" >
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="36dp">
+                android:layout_height="wrap_content">
 
-                <com.innovattic.rangeseekbar.RangeSeekBar
+                <com.dstukalov.videoconverterdemo.VideoThumbnailsView
+                    android:id="@+id/video_thumbnails"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    tools:background="#ff0000"/>
+
+                <com.dstukalov.videoconverterdemo.TimelineRangeBar
                     android:id="@+id/range_seek_bar"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    app:rsb_minThumbDrawable="@drawable/seek_thumb_min"
-                    app:rsb_maxThumbDrawable="@drawable/seek_thumb_max"
-                    app:rsb_minThumbOffsetHorizontal="-18.3dp"
-                    app:rsb_maxThumbOffsetHorizontal="18.3dp"
-                    app:rsb_trackSelectedColor="@color/accent"
-                    app:rsb_trackThickness="4dp"
-                    app:rsb_trackSelectedThickness="4dp"
-                    app:rsb_sidePadding="10dp"/>
+                    android:layout_height="48dp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"/>
 
-                <ProgressBar
-                    android:id="@+id/progress_bar"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginRight="8dp"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone" />
             </FrameLayout>
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginLeft="8dp"
+                android:layout_marginRight="8dp"
+                android:layout_marginTop="4dp"
+                android:visibility="invisible" />
 
             <LinearLayout
                 android:layout_width="match_parent"

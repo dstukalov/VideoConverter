@@ -33,7 +33,6 @@ import androidx.core.content.FileProvider;
 import com.dstukalov.videoconverter.BadMediaException;
 import com.dstukalov.videoconverter.MediaConversionException;
 import com.dstukalov.videoconverter.MediaConverter;
-import com.innovattic.rangeseekbar.RangeSeekBar;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -62,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar mConversionProgressBar;
     private ProgressBar mLoadingProgressBar;
     private TextView mTimeView;
-    private RangeSeekBar mRangeSeekBar;
+    private TimelineRangeBar mTimelineRangeBar;
     private VideoThumbnailsView mTimelineView;
     private TextView mTrimInfo;
 
@@ -111,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         mInputInfoView = findViewById(R.id.input_info);
         mOutputInfoView = findViewById(R.id.output_info);
         mTimeView = findViewById(R.id.current_time);
-        mRangeSeekBar = findViewById(R.id.range_seek_bar);
+        mTimelineRangeBar = findViewById(R.id.range_seek_bar);
         mTimelineView = findViewById(R.id.video_thumbnails);
 
         mTrimInfo = findViewById(R.id.trim_info);
@@ -362,35 +361,28 @@ public class MainActivity extends AppCompatActivity {
 
         mTimelineView.setVideoFile(mInputFile == null ? null : mInputFile.getAbsolutePath());
 
-        mRangeSeekBar.setMax((int) duration);
-        mRangeSeekBar.setSeekBarChangeListener(new RangeSeekBar.SeekBarChangeListener() {
+        mTimelineRangeBar.setDuration(duration);
+        mTimelineRangeBar.setMinRange(1000L);
+        mTimelineRangeBar.setCallback(new TimelineRangeBar.Callback() {
 
-            @Override
-            public void onStartedSeeking() {
-            }
-
-            @Override
-            public void onStoppedSeeking() {
-                mRangeSeekBar.postDelayed(() -> {
+            final Runnable mHideTrimInfoRunnable = new Runnable() {
+                @Override
+                public void run() {
                     mTrimInfo.setVisibility(View.GONE);
                     final Animation fadeOut = new AlphaAnimation(1, 0);
                     fadeOut.setDuration(600);
                     mTrimInfo.startAnimation(fadeOut);
-                }, 1000);
-            }
+                }
+            };
 
             @Override
-            public void onValueChanged(int minValue, int maxValue) {
+            public void onRangeChanged(long position, long timeFrom, long timeTo, @TimelineRangeBar.MotionEdge int motionEdge) {
                 if (mPreviewThread != null) {
-                    if (mTimeFrom != minValue) {
-                        mPreviewThread.requestShowFrame(minValue);
-                    } else if (mTimeTo != maxValue) {
-                        mPreviewThread.requestShowFrame(maxValue);
-                    }
+                    mPreviewThread.requestShowFrame(position);
                 }
 
-                mTimeFrom = minValue;
-                mTimeTo = maxValue;
+                mTimeFrom = timeFrom;
+                mTimeTo = timeTo;
 
                 if (mTrimInfo.getVisibility() != View.VISIBLE) {
                     mTrimInfo.setVisibility(View.VISIBLE);
@@ -398,13 +390,14 @@ public class MainActivity extends AppCompatActivity {
                     fadeIn.setDuration(100);
                     mTrimInfo.startAnimation(fadeIn);
                 }
+                mTrimInfo.removeCallbacks(mHideTrimInfoRunnable);
+                mTrimInfo.postDelayed(mHideTrimInfoRunnable, 1000);
                 mTrimInfo.setText(getString(R.string.trim_info,
                         DateUtils.formatElapsedTime(mTimeFrom / 1000),
                         DateUtils.formatElapsedTime(mTimeTo / 1000),
                         DateUtils.formatElapsedTime((mTimeTo - mTimeFrom) / 1000)));
 
                 estimateOutput();
-
             }
         });
 
@@ -459,8 +452,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
             mMainLayout.setVisibility(View.VISIBLE);
             if (mConverted) {
-                mConversionProgressBar.setVisibility(View.GONE);
-                mRangeSeekBar.setVisibility(View.INVISIBLE);
+                mConversionProgressBar.setVisibility(View.INVISIBLE);
+                mTimelineRangeBar.setVisibility(View.INVISIBLE);
                 mTimelineView.setVisibility(View.INVISIBLE);
                 mConvertButton.setText(R.string.convert);
                 mConvertButton.setVisibility(View.INVISIBLE);
@@ -468,8 +461,8 @@ public class MainActivity extends AppCompatActivity {
                 mOutputPlayButton.setVisibility(View.VISIBLE);
                 mOutputSendButton.setVisibility(View.VISIBLE);
             } else if (mConversionTask == null) {
-                mConversionProgressBar.setVisibility(View.GONE);
-                mRangeSeekBar.setVisibility(View.VISIBLE);
+                mConversionProgressBar.setVisibility(View.INVISIBLE);
+                mTimelineRangeBar.setVisibility(View.VISIBLE);
                 mTimelineView.setVisibility(View.VISIBLE);
                 mConvertButton.setText(R.string.convert);
                 mConvertButton.setVisibility(View.VISIBLE);
@@ -478,7 +471,7 @@ public class MainActivity extends AppCompatActivity {
                 mOutputSendButton.setVisibility(View.GONE);
             } else {
                 mConversionProgressBar.setVisibility(View.VISIBLE);
-                mRangeSeekBar.setVisibility(View.GONE);
+                mTimelineRangeBar.setVisibility(View.GONE);
                 mTimelineView.setVisibility(View.VISIBLE);
                 mConvertButton.setText(R.string.cancel);
                 mConvertButton.setVisibility(View.VISIBLE);
@@ -494,9 +487,9 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             return;
         }
-        long timeFrom = mRangeSeekBar.getMinThumbValue();
-        long timeTo = mRangeSeekBar.getMaxThumbValue();
-        if (timeTo == mRangeSeekBar.getMax()) {
+        long timeFrom = mTimelineRangeBar.getTimeFrom();
+        long timeTo = mTimelineRangeBar.getTimeTo();
+        if (timeTo == mTimelineRangeBar.getDuration()) {
             timeTo = 0;
         }
         try {
@@ -636,7 +629,7 @@ public class MainActivity extends AppCompatActivity {
             mConversionProgressBar.setVisibility(View.VISIBLE);
             mConversionProgressBar.setIndeterminate(true);
             mConversionProgressBar.setProgress(0);
-            mRangeSeekBar.setVisibility(View.INVISIBLE);
+            mTimelineRangeBar.setVisibility(View.INVISIBLE);
             mWakeLock.acquire(10*60*1000L /*10 minutes*/);
         }
 
@@ -697,9 +690,11 @@ public class MainActivity extends AppCompatActivity {
 
         void requestShowFrame(final long frameTime) {
             synchronized (mLock) {
-                Log.i(TAG, "video-thumbnails REQUEST FRAME AT " + frameTime);
-                this.mFrameTime = frameTime;
-                mLock.notifyAll();
+                if (mFrameTime != frameTime) {
+                    Log.i(TAG, "video-thumbnails REQUEST FRAME AT " + frameTime);
+                    this.mFrameTime = frameTime;
+                    mLock.notifyAll();
+                }
             }
         }
 
