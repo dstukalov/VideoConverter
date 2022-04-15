@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.dstukalov.videoconverter.Preconditions;
 
 import org.mp4parser.Box;
+import org.mp4parser.boxes.iso14496.part12.ChunkOffset64BitBox;
 import org.mp4parser.boxes.iso14496.part12.ChunkOffsetBox;
 import org.mp4parser.boxes.iso14496.part12.CompositionTimeToSample;
 import org.mp4parser.boxes.iso14496.part12.FileTypeBox;
@@ -196,6 +197,17 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
         return mvhd;
     }
 
+    protected Box createStbl(StreamingTrack streamingTrack) {
+        SampleTableBox stbl = new SampleTableBox();
+
+        stbl.addBox(streamingTrack.getSampleDescriptionBox());
+        stbl.addBox(new TimeToSampleBox());
+        stbl.addBox(new SampleToChunkBox());
+        stbl.addBox(new SampleSizeBox());
+        stbl.addBox(new ChunkOffset64BitBox/*StaticChunkOffsetBox*/());
+        return stbl;
+    }
+
     private void write(final @NonNull WritableByteChannel out, Box... boxes) throws IOException {
         for (Box box1 : boxes) {
             box1.getBox(out);
@@ -223,8 +235,8 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
 
     private void writeChunkContainer(ChunkContainer chunkContainer) throws IOException {
         final TrackBox tb = trackBoxes.get(chunkContainer.streamingTrack);
-        final ChunkOffsetBox stco = Preconditions.checkNotNull(Path.getPath(tb, "mdia[0]/minf[0]/stbl[0]/stco[0]"));
-        stco.setChunkOffsets(Mp4Arrays.copyOfAndAppend(stco.getChunkOffsets(), bytesWritten + 8));
+        final ChunkOffsetBox co64 = Preconditions.checkNotNull(Path.getPath(tb, "mdia[0]/minf[0]/stbl[0]/co64[0]"));
+        co64.setChunkOffsets(Mp4Arrays.copyOfAndAppend(co64.getChunkOffsets(), bytesWritten + 8));
         write(sink, chunkContainer.mdat);
     }
 
