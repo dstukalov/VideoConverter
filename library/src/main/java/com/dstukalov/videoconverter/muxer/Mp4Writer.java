@@ -130,6 +130,11 @@ public class Mp4Writer extends DefaultBoxes implements SampleSink {
     }
 
     public void close() throws IOException {
+        for (Queue<ChunkContainer> tracksFragmentQueue : chunkBuffers.values()) {
+            for ( ChunkContainer chunkContainer : tracksFragmentQueue) {
+                writeChunkContainer(chunkContainer);
+            }
+        }
         for (StreamingTrack streamingTrack : source) {
             writeChunkContainer(createChunkContainer(streamingTrack));
             streamingTrack.close();
