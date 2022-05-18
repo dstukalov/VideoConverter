@@ -14,7 +14,7 @@
     <string name="reselect">Reselect</string>
     <string name="bad_video">Not a video</string>
     <string name="trim_info">%1$s - %2$s (duration %3$s)</string>
-    <string name="video_info">%1$sx%2$s, %3$s, %4$s</string>
+    <string name="video_info">%1$dx%2$d, %3$s, %4$s</string>
     <string name="video_info_output">%1$dx%2$d, %3$s, ~%4$s</string>
     <string name="conversion_failed">Failed to convert</string>
     <string name="seconds_elapsed">%d sec. elapsed</string>

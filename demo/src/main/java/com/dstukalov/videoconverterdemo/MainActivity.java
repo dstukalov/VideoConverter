@@ -1,16 +1,13 @@
 package com.dstukalov.videoconverterdemo;
 
 import android.app.Activity;
-import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.media.MediaMetadataRetriever;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.text.format.DateUtils;
 import android.text.format.Formatter;
@@ -24,32 +21,26 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
+import androidx.lifecycle.ViewModelProvider;
 
-import com.dstukalov.videoconverter.BadMediaException;
-import com.dstukalov.videoconverter.MediaConversionException;
 import com.dstukalov.videoconverter.MediaConverter;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "video-converter";
-
-    private static final int ACTIVITY_REQUEST_CODE_PICK_VIDEO = 239;
 
     private static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
 
@@ -60,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mConvertButton;
     private ProgressBar mConversionProgressBar;
     private ProgressBar mLoadingProgressBar;
-    private TextView mTimeView;
+    private TextView mElapsedTimeView;
     private TimelineRangeBar mTimelineRangeBar;
     private VideoThumbnailsView mTimelineView;
     private TextView mTrimInfo;
@@ -69,22 +60,10 @@ public class MainActivity extends AppCompatActivity {
     private View mOutputSendButton;
     private View mOutputOptionsButton;
 
-    private @Nullable PreviewThread mPreviewThread;
-
-    private ConversionTask mConversionTask;
-    private boolean mConverted;
-
-    private File mOutputFolder;
-
-    private File mInputFile; // = new File("/storage/emulated/0/Android/data/com.dstukalov.videoconverter/files/Temp/tmp.mp4");
-    private File mOutputFile;
-
-    private int mWidth;
-    private int mHeight;
-
+    private @Nullable FramePreview mFramePreview;
+    private Converter mConverter;
     private ConversionParameters mConversionParameters = CONV_PARAMS_360P;
-    private long mTimeFrom;
-    private long mTimeTo;
+    private MainViewModel mMainViewModel;
 
     private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, MediaConverter.VIDEO_CODEC_H264, 1333000, 64000);
     private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, MediaConverter.VIDEO_CODEC_H264, 2000000, 96000);
@@ -94,22 +73,47 @@ public class MainActivity extends AppCompatActivity {
     private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
     private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
 
+    private final ActivityResultLauncher<Intent> pickVideoLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    onVideoSelected(result.getData());
+                } else {
+                    if (!mMainViewModel.isUriLoaded()) {
+                        finish();
+                    }
+                }
+            });
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                    .detectAll()
+                    .penaltyDeathOnNetwork()
+                    .penaltyLog()
+                    .penaltyFlashScreen()
+                    .penaltyDeath()
+                    .build());
 
-        mOutputFolder = getExternalFilesDir(null);
-        if (mOutputFolder == null || !mOutputFolder.mkdirs()) {
-            Log.e(TAG, "cannot create " + mOutputFolder);
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build());
         }
 
+        super.onCreate(savedInstanceState);
+        Log.i(TAG, "onCreate");
+
         setContentView(R.layout.main);
+
+        mConverter = Converter.getInstance(getApplication());
 
         mMainLayout = findViewById(R.id.main);
         mLoadingProgressBar = findViewById(R.id.loading_progress_bar);
         mInputInfoView = findViewById(R.id.input_info);
         mOutputInfoView = findViewById(R.id.output_info);
-        mTimeView = findViewById(R.id.current_time);
+        mElapsedTimeView = findViewById(R.id.current_time);
         mTimelineRangeBar = findViewById(R.id.range_seek_bar);
         mTimelineView = findViewById(R.id.video_thumbnails);
 
@@ -119,143 +123,134 @@ public class MainActivity extends AppCompatActivity {
         mConversionProgressBar.setMax(100);
         mConvertButton = findViewById(R.id.convert);
         mConvertButton.setOnClickListener(v -> {
-            if (mConverted) {
+            if (mConverter.isConverted()) {
                 final Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mOutputFile), "video/*");
+                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()), "video/*");
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(intent);
-            } else if (mConversionTask == null) {
-                final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-                mOutputFile = new File(mOutputFolder, "VID_CONVERTED_" + dateFormat.format(new Date()) + ".mp4");
-                convert();
+            } else if (mConverter.isConverting()) {
+                mConverter.cancel();
             } else {
-                mConversionTask.cancel(true);
+                convert();
             }
-            updateButtons();
+            updateControls();
         });
 
-        findViewById(R.id.input_options).setOnClickListener(v -> onInputOptions());
+        findViewById(R.id.input_options).setOnClickListener(v -> pickVideo());
 
         findViewById(R.id.input_play).setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mInputFile), "video/*");
+            intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, Objects.requireNonNull(mMainViewModel.getLoadedFile())), "video/*");
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
         });
 
         mOutputPlayButton = this.findViewById(R.id.output_play);
         mOutputPlayButton.setOnClickListener(v -> {
-            if (mConverted) {
+            if (mConverter.isConverted()) {
                 final Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mOutputFile), "video/*");
+                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()), "video/*");
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(intent);
-            } else if (mConversionTask == null) {
-                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();
-            } else {
+            } else if (mConverter.isConverting()) {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();
             }
         });
 
         mOutputSendButton = this.findViewById(R.id.output_share);
         mOutputSendButton.setOnClickListener(v -> {
-            if (mConverted) {
+            if (mConverter.isConverted()) {
                 final Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("video/*");
-                intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mOutputFile));
+                intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()));
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(intent);
-            } else if (mConversionTask == null) {
-                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();
-            } else {
+            } else if (mConverter.isConverting()) {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();
             }
         });
 
         mOutputOptionsButton = this.findViewById(R.id.output_options);
         mOutputOptionsButton.setOnClickListener(v -> {
-            if (mConversionTask == null) {
+            if (!mConverter.isConverting()) {
                 onOutputOptions();
             } else {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             }
         });
 
-        if (savedInstanceState != null) {
-            final String inputPath = savedInstanceState.getString("input");
-            if (inputPath != null) {
-                mInputFile = new File(inputPath);
-            }
-        } else if (Intent.ACTION_SEND.equals(getIntent().getAction())) {
-            final Uri uri = getIntent().getExtras() != null ? getIntent().getExtras().getParcelable(Intent.EXTRA_STREAM) : null;
-            if (uri != null) {
-                loadUri(uri);
+        mMainViewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        mMainViewModel.getLoadUriResultLiveData().observe(this, this::onUriLoaded);
+
+        if (savedInstanceState == null) {
+            if (Intent.ACTION_SEND.equals(getIntent().getAction())) {
+                final Uri uri = getIntent().getExtras() != null ? getIntent().getExtras().getParcelable(Intent.EXTRA_STREAM) : null;
+                if (uri != null) {
+                    loadUri(uri);
+                } else {
+                    pickVideo();
+                }
             } else {
                 pickVideo();
+                //loadUri(Uri.fromFile(new File("/storage/emulated/0/Android/data/com.dstukalov.videoconverter/files/tmp.mp4")));
             }
-        } else if (mInputFile == null || !mInputFile.exists()) {
-            pickVideo();
+        } else {
+            mConversionParameters = savedInstanceState.getParcelable("conversion_parameters");
         }
 
-        if (mInputFile != null) {
-            initInputData();
-        }
+        mConverter.progress.observe(this, progress -> {
+            if (progress != null) {
+                mConversionProgressBar.setIndeterminate(progress.percent >= 100);
+                mConversionProgressBar.setProgress(progress.percent);
+                mElapsedTimeView.setText(getString(R.string.seconds_elapsed, progress.elapsedTime / 1000L));
+            }
+            updateControls();
+        });
 
-        updateButtons();
+        mConverter.result.observe(this, result -> {
+            if (result != null) {
+                if (result.file != null) {
+                    final Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                    intent.setData(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, result.file));
+                    getApplicationContext().sendBroadcast(intent);
+
+                    mOutputInfoView.setText(getString(R.string.video_info,
+                            result.width,
+                            result.height,
+                            DateUtils.formatElapsedTime(result.duration / 1000),
+                            Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
+
+                    mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000));
+                } else if (result.exception != null) {
+                    Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
+                    mElapsedTimeView.setText("");
+                }
+                updateControls();
+            }
+        });
+
+        updateControls();
     }
 
     @Override
     protected void onSaveInstanceState(final @NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (mInputFile != null) {
-            outState.putCharSequence("input", mInputFile.getAbsolutePath());
-        }
+        Log.i(TAG, "onSaveInstanceState");
+        outState.putParcelable("conversion_parameters", mConversionParameters);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.i(TAG, "onDestroy");
 
-        if (mPreviewThread != null) {
-            mPreviewThread.interrupt();
-            mPreviewThread = null;
-        }
-    }
-
-    @Override
-    protected void onActivityResult(final int request, final int result, final Intent data) {
-        super.onActivityResult(request, result, data);
-        switch (request) {
-            case ACTIVITY_REQUEST_CODE_PICK_VIDEO: {
-                if (result == Activity.RESULT_OK) {
-                    if (data == null) {
-                        Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
-                        if (mInputFile == null) {
-                            pickVideo();
-                        }
-                    } else if (data.getBooleanExtra(ReselectActivity.RESELECT_EXTRA, false)) {
-                        mOutputFile = null;
-                        mConverted = false;
-                        updateButtons();
-                        initInputData();
-                    } else {
-                        final Uri uri = data.getData();
-                        if (uri != null) {
-                            loadUri(uri);
-                        } else {
-                            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
-                            if (mInputFile == null) {
-                                pickVideo();
-                            }
-                        }
-                    }
-                } else {
-                    if (mInputFile == null) {
-                        finish();
-                    }
-                }
-                break;
-            }
+        if (mFramePreview != null) {
+            mFramePreview.interrupt();
+            mFramePreview = null;
         }
     }
 
@@ -266,30 +261,39 @@ public class MainActivity extends AppCompatActivity {
             popup.getMenu().removeItem(R.id.quality_720p_h265);
             popup.getMenu().removeItem(R.id.quality_1080p_h265);
         }
+        if (CONV_PARAMS_240P.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_240p).setChecked(true);
+        } else if (CONV_PARAMS_360P.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_360p).setChecked(true);
+        } else if (CONV_PARAMS_480P.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_480p).setChecked(true);
+        } else if (CONV_PARAMS_720P.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_720p).setChecked(true);
+        } else if (CONV_PARAMS_720P_H265.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_720p_h265).setChecked(true);
+        } else if (CONV_PARAMS_1080P.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1080p).setChecked(true);
+        } else if (CONV_PARAMS_1080P_H265.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1080p_h265).setChecked(true);
+        }
         popup.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case R.id.quality_240p:
-                    mConversionParameters = CONV_PARAMS_240P;
-                    break;
-                case R.id.quality_360p:
-                    mConversionParameters = CONV_PARAMS_360P;
-                    break;
-                case R.id.quality_480p:
-                    mConversionParameters = CONV_PARAMS_480P;
-                    break;
-                case R.id.quality_720p:
-                    mConversionParameters = CONV_PARAMS_720P;
-                    break;
-                case R.id.quality_720p_h265:
-                    mConversionParameters = CONV_PARAMS_720P_H265;
-                    break;
-                case R.id.quality_1080p:
-                    mConversionParameters = CONV_PARAMS_1080P;
-                    break;
-                case R.id.quality_1080p_h265:
-                    mConversionParameters = CONV_PARAMS_1080P_H265;
-                    break;
+            final int itemId = item.getItemId();
+            if (itemId == R.id.quality_240p) {
+                mConversionParameters = CONV_PARAMS_240P;
+            } else if (itemId == R.id.quality_360p) {
+                mConversionParameters = CONV_PARAMS_360P;
+            } else if (itemId == R.id.quality_480p) {
+                mConversionParameters = CONV_PARAMS_480P;
+            } else if (itemId == R.id.quality_720p) {
+                mConversionParameters = CONV_PARAMS_720P;
+            } else if (itemId == R.id.quality_720p_h265) {
+                mConversionParameters = CONV_PARAMS_720P_H265;
+            } else if (itemId == R.id.quality_1080p) {
+                mConversionParameters = CONV_PARAMS_1080P;
+            } else if (itemId == R.id.quality_1080p_h265) {
+                mConversionParameters = CONV_PARAMS_1080P_H265;
             }
+            Log.i(TAG, "onOutputOptions selected " + mConversionParameters);
             estimateOutput();
             return true;
         });
@@ -297,72 +301,32 @@ public class MainActivity extends AppCompatActivity {
         popup.show();
     }
 
-    private void onInputOptions() {
-        pickVideo();
-    }
+    private void initInputData(@NonNull MainViewModel.LoadUriResult result) {
 
-    private void initInputData() {
+        final File file = Objects.requireNonNull(result.file);
 
-        if (mInputFile == null) {
-            return;
-        }
-        if (mPreviewThread != null) {
-            mPreviewThread.interrupt();
-            mPreviewThread = null;
+        if (mFramePreview != null) {
+            mFramePreview.interrupt();
+            mFramePreview = null;
         }
 
-        final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-
-        try {
-            mediaMetadataRetriever.setDataSource(mInputFile.getAbsolutePath());
-        } catch (Exception ex) {
-            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
-            mediaMetadataRetriever.release();
-            mInputFile = null;
-            updateButtons();
-            pickVideo();
-            return;
-        }
-
-        final String width = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
-        final String height = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
-        int rotation;
-        long duration;
-        try {
-            duration = Long.parseLong(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-            rotation = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION));
-            mWidth = Integer.parseInt(width);
-            mHeight = Integer.parseInt(height);
-        } catch (NumberFormatException e) {
-            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
-            mediaMetadataRetriever.release();
-            mInputFile = null;
-            updateButtons();
-            pickVideo();
-            return;
-        }
-        mediaMetadataRetriever.release();
-
-        mPreviewThread = new PreviewThread(mInputFile.getAbsolutePath());
-        mPreviewThread.setPriority(Thread.NORM_PRIORITY - 1);
-        mPreviewThread.start();
-        mPreviewThread.requestShowFrame(0);
-
-        mTimeFrom = 0;
-        mTimeTo = duration;
+        mFramePreview = new FramePreview(file.getAbsolutePath(), mThumbView);
+        mFramePreview.requestShowFrame(0);
 
         // to fill image view with proper width/height until we get thumbnail
         mThumbView.setImageBitmap(Bitmap.createScaledBitmap(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888),
-                rotation % 180 == 90 ? mHeight : mWidth, rotation % 180 == 90 ? mWidth : mHeight, false));
+                result.width, result.height, false));
 
-        mInputInfoView.setText(getString(R.string.video_info, width, height,
-                        DateUtils.formatElapsedTime(duration / 1000),
-                        Formatter.formatShortFileSize(this, mInputFile.length())));
+        mInputInfoView.setText(getString(R.string.video_info,
+                result.width, result.height,
+                DateUtils.formatElapsedTime(result.duration / 1000),
+                Formatter.formatShortFileSize(this, result.fileLength)));
 
-        mTimelineView.setVideoFile(mInputFile == null ? null : mInputFile.getAbsolutePath());
+        mTimelineView.setVideoFile(file.getAbsolutePath());
 
-        mTimelineRangeBar.setDuration(duration);
+        mTimelineRangeBar.setDuration(result.duration);
         mTimelineRangeBar.setMinRange(1000L);
+        mTimelineRangeBar.setRange(0, result.duration);
         mTimelineRangeBar.setCallback(new TimelineRangeBar.Callback() {
 
             final Runnable mHideTrimInfoRunnable = new Runnable() {
@@ -377,12 +341,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onRangeChanged(long position, long timeFrom, long timeTo, @TimelineRangeBar.MotionEdge int motionEdge) {
-                if (mPreviewThread != null) {
-                    mPreviewThread.requestShowFrame(position);
+                if (mFramePreview != null) {
+                    mFramePreview.requestShowFrame(position);
                 }
-
-                mTimeFrom = timeFrom;
-                mTimeTo = timeTo;
 
                 if (mTrimInfo.getVisibility() != View.VISIBLE) {
                     mTrimInfo.setVisibility(View.VISIBLE);
@@ -393,40 +354,45 @@ public class MainActivity extends AppCompatActivity {
                 mTrimInfo.removeCallbacks(mHideTrimInfoRunnable);
                 mTrimInfo.postDelayed(mHideTrimInfoRunnable, 1000);
                 mTrimInfo.setText(getString(R.string.trim_info,
-                        DateUtils.formatElapsedTime(mTimeFrom / 1000),
-                        DateUtils.formatElapsedTime(mTimeTo / 1000),
-                        DateUtils.formatElapsedTime((mTimeTo - mTimeFrom) / 1000)));
+                        DateUtils.formatElapsedTime(timeFrom / 1000),
+                        DateUtils.formatElapsedTime(timeTo / 1000),
+                        DateUtils.formatElapsedTime((timeTo - timeFrom) / 1000)));
 
                 estimateOutput();
             }
         });
 
-        mTimeView.setText("");
+        mElapsedTimeView.setText("");
 
         estimateOutput();
     }
 
     private void estimateOutput() {
-        int dstWidth;
-        int dstHeight;
-        if (mWidth <= mHeight) {
-            dstWidth = mConversionParameters.mVideoResolution;
-            dstHeight = mHeight * dstWidth / mWidth;
-            dstHeight = dstHeight & ~3;
-        } else {
-            dstHeight = mConversionParameters.mVideoResolution;
-            dstWidth = mWidth * dstHeight / mHeight;
-            dstWidth = dstWidth & ~3;
-        }
-        final long duration = (mTimeTo - mTimeFrom) / 1000;
-        final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
+        final MainViewModel.LoadUriResult loadUriResult = mMainViewModel.getLoadUriResultLiveData().getValue();
+        if (loadUriResult != null) {
+            int dstWidth;
+            int dstHeight;
+            if (loadUriResult.width <= loadUriResult.height) {
+                dstWidth = mConversionParameters.mVideoResolution;
+                dstHeight = loadUriResult.height * dstWidth / loadUriResult.width;
+                dstHeight = dstHeight & ~3;
+            } else {
+                dstHeight = mConversionParameters.mVideoResolution;
+                dstWidth = loadUriResult.width * dstHeight / loadUriResult.height;
+                dstWidth = dstWidth & ~3;
+            }
+            final long duration = (mTimelineRangeBar.getTimeTo() - mTimelineRangeBar.getTimeFrom()) / 1000;
+            final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
 
-        mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
+            mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
+        } else {
+            mOutputInfoView.setText(null);
+        }
     }
 
     private void pickVideo() {
 
-        if (mConversionTask != null) {
+        if (mConverter.isConverting()) {
             Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -437,21 +403,43 @@ public class MainActivity extends AppCompatActivity {
         final Intent reselectIntent = new Intent("com.dstukalov.videoconverter.intent.action.RESELECT", null);
         final Intent chooserIntent = Intent.createChooser(pickIntent, getString(R.string.select_video));
 
-        if (mConverted) {
+        if (mConverter.isConverted()) {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{reselectIntent, captureIntent});
         } else {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{captureIntent});
         }
 
-        startActivityForResult(chooserIntent, ACTIVITY_REQUEST_CODE_PICK_VIDEO);
+        pickVideoLauncher.launch(chooserIntent);
     }
 
-    private void updateButtons() {
-        if (mInputFile == null) {
-            mMainLayout.setVisibility(View.INVISIBLE);
+    private void onVideoSelected(final Intent data) {
+        if (data == null) {
+            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+            if (!mMainViewModel.isUriLoaded()) {
+                pickVideo();
+            }
+        } else if (data.getBooleanExtra(ReselectActivity.RESELECT_EXTRA, false)) {
+            mConverter.reset();
+            updateControls();
+            estimateOutput();
+            mElapsedTimeView.setText("");
         } else {
+            final Uri uri = data.getData();
+            if (uri != null) {
+                loadUri(uri);
+            } else {
+                Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+                if (!mMainViewModel.isUriLoaded()) {
+                    pickVideo();
+                }
+            }
+        }
+    }
+
+    private void updateControls() {
+        if (mMainViewModel.isUriLoaded()) {
             mMainLayout.setVisibility(View.VISIBLE);
-            if (mConverted) {
+            if (mConverter.isConverted()) {
                 mConversionProgressBar.setVisibility(View.INVISIBLE);
                 mTimelineRangeBar.setVisibility(View.INVISIBLE);
                 mTimelineView.setVisibility(View.INVISIBLE);
@@ -460,16 +448,7 @@ public class MainActivity extends AppCompatActivity {
                 mOutputOptionsButton.setVisibility(View.GONE);
                 mOutputPlayButton.setVisibility(View.VISIBLE);
                 mOutputSendButton.setVisibility(View.VISIBLE);
-            } else if (mConversionTask == null) {
-                mConversionProgressBar.setVisibility(View.INVISIBLE);
-                mTimelineRangeBar.setVisibility(View.VISIBLE);
-                mTimelineView.setVisibility(View.VISIBLE);
-                mConvertButton.setText(R.string.convert);
-                mConvertButton.setVisibility(View.VISIBLE);
-                mOutputOptionsButton.setVisibility(View.VISIBLE);
-                mOutputPlayButton.setVisibility(View.GONE);
-                mOutputSendButton.setVisibility(View.GONE);
-            } else {
+            } else if (mConverter.isConverting()) {
                 mConversionProgressBar.setVisibility(View.VISIBLE);
                 mTimelineRangeBar.setVisibility(View.GONE);
                 mTimelineView.setVisibility(View.VISIBLE);
@@ -478,12 +457,23 @@ public class MainActivity extends AppCompatActivity {
                 mOutputOptionsButton.setVisibility(View.VISIBLE);
                 mOutputPlayButton.setVisibility(View.GONE);
                 mOutputSendButton.setVisibility(View.GONE);
+            } else {
+                mConversionProgressBar.setVisibility(View.INVISIBLE);
+                mTimelineRangeBar.setVisibility(View.VISIBLE);
+                mTimelineView.setVisibility(View.VISIBLE);
+                mConvertButton.setText(R.string.convert);
+                mConvertButton.setVisibility(View.VISIBLE);
+                mOutputOptionsButton.setVisibility(View.VISIBLE);
+                mOutputPlayButton.setVisibility(View.GONE);
+                mOutputSendButton.setVisibility(View.GONE);
             }
+        } else {
+            mMainLayout.setVisibility(View.INVISIBLE);
         }
     }
 
     private void convert() {
-        if (mConversionTask != null) {
+        if (mConverter.isConverting()) {
             Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -492,262 +482,94 @@ public class MainActivity extends AppCompatActivity {
         if (timeTo == mTimelineRangeBar.getDuration()) {
             timeTo = 0;
         }
-        try {
-            mConversionTask = new ConversionTask(mInputFile, mOutputFile, timeFrom, timeTo, mConversionParameters);
-            mConversionTask.execute();
-        } catch (FileNotFoundException e) {
-            mConversionTask = null;
-            Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
-        }
+        final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+        final String fileName =  "VID_CONVERTED_" + dateFormat.format(new Date()) + ".mp4";
+
+        mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), fileName, timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
+                mConversionParameters.mVideoBitrate, mConversionParameters.mAudioBitrate);
     }
 
     private void loadUri(final @NonNull Uri uri) {
-        mInputFile = null;
         mMainLayout.setVisibility(View.INVISIBLE);
         mLoadingProgressBar.setVisibility(View.VISIBLE);
-        new LoadUriTask(uri).execute();
+
+        mMainViewModel.loadUri(uri);
     }
 
-    private class LoadUriTask extends AsyncTask<Void, Void, File> {
-
-        final Uri mUri;
-
-        LoadUriTask(final @NonNull Uri uri) {
-            mUri = uri;
-        }
-
-        @Override
-        protected File doInBackground(Void... voids) {
-            File outFile = null;
-            ContentResolver cr = getContentResolver();
-            if (cr != null) {
-                InputStream inputStream = null;
-                OutputStream outputStream = null;
-                try {
-                    final File tmpFolder = new File(mOutputFolder, "Temp");
-                    if (!tmpFolder.mkdirs()) {
-                        Log.e(TAG, "cannot create " + tmpFolder);
-                    }
-                    outFile = new File(tmpFolder, "tmp.mp4");
-                    inputStream = cr.openInputStream(mUri);
-                    if (inputStream != null) {
-                        outputStream = new FileOutputStream(outFile);
-                        byte[] buffer = new byte[4096];
-                        int n;
-                        while ((n = inputStream.read(buffer, 0, buffer.length)) >= 0) {
-                            outputStream.write(buffer, 0, n);
-                        }
-                    }
-                } catch (SecurityException | IOException e) {
-                    Log.w(TAG, "Unable to open stream", e);
-                    outFile = null;
-                } finally {
-                    if (inputStream != null) {
-                        try {
-                            inputStream.close();
-                        } catch (IOException e) {
-                            Log.w(TAG, "Unable to close stream", e);
-                        }
-                    }
-                    if (outputStream != null) {
-                        try {
-                            outputStream.close();
-                        } catch (IOException e) {
-                            Log.w(TAG, "Unable to close stream", e);
-                        }
-                    }
-                }
-            }
-            return outFile;
-        }
-
-        @Override
-        protected void onPostExecute(final File file) {
-            mLoadingProgressBar.setVisibility(View.GONE);
-            if (file != null) {
-                mInputFile = file;
-                mOutputFile = null;
-                mConverted = false;
-                updateButtons();
-                initInputData();
-            } else {
-                Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
-                pickVideo();
-            }
+    private void onUriLoaded(@NonNull MainViewModel.LoadUriResult result) {
+        mLoadingProgressBar.setVisibility(View.GONE);
+        if (result.isOk()) {
+            mConverter.reset();
+            updateControls();
+            initInputData(result);
+        } else {
+            Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
+            pickVideo();
         }
     }
 
-    private class ConversionTask extends AsyncTask<Void, Integer, Boolean> {
+    private static class ConversionParameters implements Parcelable  {
 
-        final MediaConverter mConverter;
-        long mStartTime;
-        WakeLock mWakeLock;
-
-        ConversionTask(final @NonNull File input, final @NonNull File output, final long timeFrom, final long timeTo, final @NonNull ConversionParameters conversionParameters) throws FileNotFoundException {
-
-            mConverter = new MediaConverter();
-            mConverter.setInput(input);
-            mConverter.setOutput(output);
-            mConverter.setTimeRange(timeFrom, timeTo);
-            mConverter.setVideoResolution(conversionParameters.mVideoResolution);
-            mConverter.setVideoCodec(conversionParameters.mVideoCodec);
-            mConverter.setVideoBitrate(conversionParameters.mVideoBitrate);
-            mConverter.setAudioBitrate(conversionParameters.mAudioBitrate);
-
-            mConverter.setListener(percent -> {
-                publishProgress(percent);
-                return isCancelled();
-            });
-
-            final PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VideoConverter:convert");
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-
-            try {
-                mConverter.convert();
-            } catch (BadMediaException | IOException | MediaConversionException e) {
-                Log.e(TAG, "failed to convert: " + e.toString(), e);
-                return Boolean.FALSE;
-            }
-
-            Log.i(TAG, "Conversion finished, output file size is " + mOutputFile.length());
-            return Boolean.TRUE;
-        }
-
-        protected void onProgressUpdate(Integer... values) {
-            final Integer progress = values[0];
-            mConversionProgressBar.setIndeterminate(progress >= 100);
-            mConversionProgressBar.setProgress(progress);
-            mTimeView.setText(getString(R.string.seconds_elapsed, (System.currentTimeMillis() - mStartTime) / 1000));
-        }
-
-        protected void onPreExecute() {
-            mStartTime = System.currentTimeMillis();
-            mConversionProgressBar.setVisibility(View.VISIBLE);
-            mConversionProgressBar.setIndeterminate(true);
-            mConversionProgressBar.setProgress(0);
-            mTimelineRangeBar.setVisibility(View.INVISIBLE);
-            mWakeLock.acquire(10*60*1000L /*10 minutes*/);
-        }
-
-        protected void onCancelled() {
-            mConversionTask = null;
-            updateButtons();
-            mTimeView.setText("");
-            if (mWakeLock.isHeld()) {
-                mWakeLock.release();
-            }
-        }
-
-        protected void onPostExecute(final Boolean result) {
-            mConversionTask = null;
-
-            if (Boolean.TRUE.equals(result)) {
-                mConverted = true;
-                final Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                intent.setData(Uri.fromFile(mOutputFile));
-                getApplicationContext().sendBroadcast(intent);
-
-                final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-
-                mediaMetadataRetriever.setDataSource(mOutputFile.getAbsolutePath());
-                final String duration = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                final String width = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
-                final String height = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
-
-                mediaMetadataRetriever.release();
-
-                mOutputInfoView.setText(getString(R.string.video_info, width, height,
-                        DateUtils.formatElapsedTime(duration == null ? 0 : (Long.parseLong( duration) / 1000)),
-                        Formatter.formatShortFileSize(MainActivity.this, mOutputFile.length())));
-
-            } else {
-                Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
-            }
-            updateButtons();
-            mTimeView.setText(getString(R.string.seconds_elapsed, (System.currentTimeMillis() - mStartTime) / 1000));
-
-            if (mWakeLock.isHeld()) {
-                mWakeLock.release();
-            }
-        }
-    }
-
-    private class PreviewThread extends Thread {
-
-        private final String mFilePath;
-        private long mFrameTime = -1;
-        private final Object mLock = new Object();
-        private final AtomicBoolean mRunning = new AtomicBoolean(true);
-
-
-        PreviewThread(final @NonNull String filePath) {
-            mFilePath = filePath;
-        }
-
-        void requestShowFrame(final long frameTime) {
-            synchronized (mLock) {
-                if (mFrameTime != frameTime) {
-                    Log.i(TAG, "video-thumbnails REQUEST FRAME AT " + frameTime);
-                    this.mFrameTime = frameTime;
-                    mLock.notifyAll();
-                }
-            }
-        }
-
-        public void run() {
-            final MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-            try {
-                mediaMetadataRetriever.setDataSource(mFilePath);
-            } catch (Exception ex) {
-                return;
-            }
-            try {
-                long lastFrameTime = -1;
-
-                //noinspection InfiniteLoopStatement
-                while (true) {
-
-                    synchronized (mLock) {
-                        if (mFrameTime == lastFrameTime) {
-                            mLock.wait();
-                        }
-                        lastFrameTime = mFrameTime;
-                    }
-
-                    final Bitmap bitmap = mediaMetadataRetriever.getFrameAtTime(lastFrameTime * 1000);
-                    if (bitmap != null) {
-                        Log.i(TAG, "video-thumbnails GOT FRAME AT " + mFrameTime);
-                        MainActivity.this.runOnUiThread(() -> {
-                            if (mRunning.get()) {
-                                mThumbView.setImageBitmap(bitmap);
-                            }
-                        });
-                    }
-                }
-
-            } catch (InterruptedException e) {
-                //allow thread to exit
-            }
-            mRunning.set(false);
-            mediaMetadataRetriever.release();
-        }
-    }
-
-    private static class ConversionParameters {
         final int mVideoResolution;
         final @MediaConverter.VideoCodec String mVideoCodec;
         final int mVideoBitrate;
         final int mAudioBitrate;
 
-        ConversionParameters(final int videoResolution, final @MediaConverter.VideoCodec String videoCodec, final int videoBitrate, final int audioBitrate) {
+        public static final Parcelable.Creator<ConversionParameters> CREATOR = new Parcelable.Creator<ConversionParameters>() {
+            public ConversionParameters createFromParcel(Parcel in) {
+                return new ConversionParameters(in);
+            }
+
+            public ConversionParameters[] newArray(int size) {
+                return new ConversionParameters[size];
+            }
+        };
+
+        ConversionParameters(int videoResolution, @NonNull @MediaConverter.VideoCodec String videoCodec, int videoBitrate, int audioBitrate) {
             mVideoResolution = videoResolution;
             mVideoCodec = videoCodec;
             mVideoBitrate = videoBitrate;
             mAudioBitrate = audioBitrate;
+        }
+
+        ConversionParameters(Parcel in) {
+            mVideoResolution = in.readInt();
+            mVideoCodec = in.readString();
+            mVideoBitrate = in.readInt();
+            mAudioBitrate = in.readInt();
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeInt(mVideoResolution);
+            dest.writeString(mVideoCodec);
+            dest.writeInt(mVideoBitrate);
+            dest.writeInt(mAudioBitrate);
+        }
+
+
+
+        @Override
+        public @NonNull String toString() {
+            return mVideoResolution + "p " + mVideoCodec + " video:" + mVideoBitrate + "kbps audio:" + mAudioBitrate + "kbps";
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ConversionParameters that = (ConversionParameters) o;
+            return mVideoResolution == that.mVideoResolution && mVideoBitrate == that.mVideoBitrate && mAudioBitrate == that.mAudioBitrate && mVideoCodec.equals(that.mVideoCodec);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mVideoResolution, mVideoCodec, mVideoBitrate, mAudioBitrate);
         }
     }
 }
