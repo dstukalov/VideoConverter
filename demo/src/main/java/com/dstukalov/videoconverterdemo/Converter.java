@@ -25,6 +25,8 @@ public class Converter {
 
     private static final String TAG = "Converter";
 
+    public static final String CONVERTED_VIDEO_PREFIX = "VID_CONVERTED_";
+
     private static volatile Converter INSTANCE;
 
     private final Application application;

@@ -12,6 +12,8 @@ import android.provider.MediaStore;
 import android.text.format.DateUtils;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
@@ -42,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "video-converter";
 
-    private static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
+    public static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
 
     private View mMainLayout;
     private TextView mInputInfoView;
@@ -136,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             updateControls();
         });
 
-        findViewById(R.id.input_options).setOnClickListener(v -> pickVideo());
+        findViewById(R.id.input_pick).setOnClickListener(v -> pickVideo());
 
         findViewById(R.id.input_play).setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -214,10 +216,6 @@ public class MainActivity extends AppCompatActivity {
         mConverter.result.observe(this, result -> {
             if (result != null) {
                 if (result.file != null) {
-                    final Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                    intent.setData(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, result.file));
-                    getApplicationContext().sendBroadcast(intent);
-
                     mOutputInfoView.setText(getString(R.string.video_info,
                             result.width,
                             result.height,
@@ -252,6 +250,23 @@ public class MainActivity extends AppCompatActivity {
             mFramePreview.interrupt();
             mFramePreview = null;
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.id_library: {
+                startActivity(new Intent(this, LibraryActivity.class));
+                return true;
+            }
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void onOutputOptions() {
@@ -483,7 +498,7 @@ public class MainActivity extends AppCompatActivity {
             timeTo = 0;
         }
         final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-        final String fileName =  "VID_CONVERTED_" + dateFormat.format(new Date()) + ".mp4";
+        final String fileName = Converter.CONVERTED_VIDEO_PREFIX + dateFormat.format(new Date()) + ".mp4";
 
         mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), fileName, timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
                 mConversionParameters.mVideoBitrate, mConversionParameters.mAudioBitrate);
