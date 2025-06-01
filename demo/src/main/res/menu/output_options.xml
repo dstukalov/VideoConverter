@@ -15,7 +15,7 @@
             android:title="@string/quality_720p_h265"/>
         <item android:id="@+id/quality_1080p"
             android:title="@string/quality_1080p"/>
-        <item android:id="@+id/quality_1080p_h265"
-            android:title="@string/quality_1080p_h265"/>
+        <item android:id="@+id/quality_1080p_h265_6000kbps"
+            android:title="1080p, H265, 6000kbps"/>
     </group>
 </menu>

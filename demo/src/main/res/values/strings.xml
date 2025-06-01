@@ -27,7 +27,7 @@
     <string name="quality_720p">720p</string>
     <string name="quality_720p_h265">720p, h265</string>
     <string name="quality_1080p">1080p</string>
-    <string name="quality_1080p_h265">1080p, h265</string>
+    <string name="quality_1080p_h265_6000kbps">1080p, h265, 6000kbps</string>
     <string name="video_preview">Video preview</string>
     <string name="converted_videos">Converted videos</string>
     <string name="no_converted_videos">No converted videos</string>
