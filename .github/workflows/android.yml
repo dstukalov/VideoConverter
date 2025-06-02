@@ -44,6 +44,10 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
+      # Decode and generate keystore.jks
+      - name: Decode keystore and save to file
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
+
       # Run Build Project
       - name: Build gradle project
         run: ./gradlew build
@@ -54,7 +58,15 @@ jobs:
 
       # Create APK Release
       - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-        run: ./gradlew assemble
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      # Delete keystore.jks after build is complete
+      - name: Clean up keystore
+        run: rm keystore.jks
 
       # Upload Artifact Build
       # Noted For Output [main_project_module]/build/outputs/apk/debug/
