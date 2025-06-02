@@ -1,6 +1,14 @@
+# Notes Specific To This Repo
+I am not an actual app developer, so my fix and additions will be limited to what can be done.
+
+I will primarily work on demo app, potentially adding feature, changing layout or theme
+
+I have already added extra options to resolution, bitrate and removed useless lower resolution to make room for extra variety in useful options
+
+Next i will try to add features like saving video with original name and original modified time and saving them to a user accessible location instead of /sdcard/Android/data
+***
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter)
 [![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f4904c4356fd432c8e9edd85a5468c5c)](https://app.codacy.com/app/dstukalov/VideoConverter?utm_source=github.com&utm_medium=referral&utm_content=dstukalov/VideoConverter&utm_campaign=Badge_Grade_Dashboard)
 
 # VideoConverter
 Video file conversion library based on <a href="https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/ExtractDecodeEditEncodeMuxTest.java">ExtractDecodeEditEncodeMuxTest.java</a> CTS test
