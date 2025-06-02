@@ -3,19 +3,19 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <group android:checkableBehavior="single">
-        <item android:id="@+id/quality_240p"
-            android:title="@string/quality_240p"/>
-        <item android:id="@+id/quality_360p"
-            android:title="@string/quality_360p"/>
-        <item android:id="@+id/quality_480p"
-            android:title="@string/quality_480p"/>
         <item android:id="@+id/quality_720p"
             android:title="@string/quality_720p"/>
         <item android:id="@+id/quality_720p_h265"
             android:title="@string/quality_720p_h265"/>
         <item android:id="@+id/quality_1080p"
             android:title="@string/quality_1080p"/>
+        <item android:id="@+id/quality_1080p_h265_3000kbps"
+            android:title="@string/quality_1080p_h265_3000kbps"/>
         <item android:id="@+id/quality_1080p_h265_6000kbps"
-            android:title="1080p, H265, 6000kbps"/>
+            android:title="@string/quality_1080p_h265_6000kbps"/>
+        <item android:id="@+id/quality_1440p_h265_9000kbps"
+            android:title="@string/quality_1440p_h265_9000kbps"/>
+        <item android:id="@+id/quality_2160p_h265_12000kbps"
+            android:title="@string/quality_2160p_h265_12000kbps"/>
     </group>
 </menu>

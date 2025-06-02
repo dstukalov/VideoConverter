@@ -67,13 +67,13 @@ public class MainActivity extends AppCompatActivity {
     private ConversionParameters mConversionParameters = CONV_PARAMS_1080P_H265_6000kbps;
     private MainViewModel mMainViewModel;
 
-    private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, MediaConverter.VIDEO_CODEC_H264, 1333000, 64000);
-    private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, MediaConverter.VIDEO_CODEC_H264, 2000000, 96000);
-    private static final ConversionParameters CONV_PARAMS_480P = new ConversionParameters(480, MediaConverter.VIDEO_CODEC_H264, 2666000, 128000);
     private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
     private static final ConversionParameters CONV_PARAMS_720P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  2000000, 192000);
     private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P_H265_3000kbps = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
     private static final ConversionParameters CONV_PARAMS_1080P_H265_6000kbps = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  6000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1440P_H265_9000kbps = new ConversionParameters(1440, MediaConverter.VIDEO_CODEC_H265,  9000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_2160P_H265_12000kbps = new ConversionParameters(2160, MediaConverter.VIDEO_CODEC_H265,  12000000, 192000);
 
     private final ActivityResultLauncher<Intent> pickVideoLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -274,39 +274,42 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenuInflater().inflate(R.menu.output_options, popup.getMenu());
         if (MediaConverter.selectCodec(MediaConverter.VIDEO_CODEC_H265) == null) {
             popup.getMenu().removeItem(R.id.quality_720p_h265);
+            popup.getMenu().removeItem(R.id.quality_1080p_h265_3000kbps);
             popup.getMenu().removeItem(R.id.quality_1080p_h265_6000kbps);
+            popup.getMenu().removeItem(R.id.quality_1440p_h265_9000kbps);
+            popup.getMenu().removeItem(R.id.quality_2160p_h265_12000kbps);
         }
-        if (CONV_PARAMS_240P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_240p).setChecked(true);
-        } else if (CONV_PARAMS_360P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_360p).setChecked(true);
-        } else if (CONV_PARAMS_480P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_480p).setChecked(true);
-        } else if (CONV_PARAMS_720P.equals(mConversionParameters)) {
+        if (CONV_PARAMS_720P.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_720p).setChecked(true);
         } else if (CONV_PARAMS_720P_H265.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_720p_h265).setChecked(true);
         } else if (CONV_PARAMS_1080P.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_1080p).setChecked(true);
+        } else if (CONV_PARAMS_1080P_H265_3000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1080p_h265_3000kbps).setChecked(true);
         } else if (CONV_PARAMS_1080P_H265_6000kbps.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_1080p_h265_6000kbps).setChecked(true);
+        } else if (CONV_PARAMS_1440P_H265_9000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1440p_h265_9000kbps).setChecked(true);
+        } else if (CONV_PARAMS_2160P_H265_12000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_2160p_h265_12000kbps).setChecked(true);
         }
         popup.setOnMenuItemClickListener(item -> {
             final int itemId = item.getItemId();
-            if (itemId == R.id.quality_240p) {
-                mConversionParameters = CONV_PARAMS_240P;
-            } else if (itemId == R.id.quality_360p) {
-                mConversionParameters = CONV_PARAMS_360P;
-            } else if (itemId == R.id.quality_480p) {
-                mConversionParameters = CONV_PARAMS_480P;
-            } else if (itemId == R.id.quality_720p) {
+            if (itemId == R.id.quality_720p) {
                 mConversionParameters = CONV_PARAMS_720P;
             } else if (itemId == R.id.quality_720p_h265) {
                 mConversionParameters = CONV_PARAMS_720P_H265;
             } else if (itemId == R.id.quality_1080p) {
                 mConversionParameters = CONV_PARAMS_1080P;
+            } else if (itemId == R.id.quality_1080p_h265_3000kbps) {
+                mConversionParameters = CONV_PARAMS_1080P_H265_3000kbps;
             } else if (itemId == R.id.quality_1080p_h265_6000kbps) {
                 mConversionParameters = CONV_PARAMS_1080P_H265_6000kbps;
+            } else if (itemId == R.id.quality_1440p_h265_9000kbps) {
+                mConversionParameters = CONV_PARAMS_1440P_H265_9000kbps;
+            } else if (itemId == R.id.quality_2160p_h265_12000kbps) {
+                mConversionParameters = CONV_PARAMS_2160P_H265_12000kbps;
             }
             Log.i(TAG, "onOutputOptions selected " + mConversionParameters);
             estimateOutput();
@@ -420,6 +423,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (mConverter.isConverted()) {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{reselectIntent, captureIntent});
+            Toast.makeText(getBaseContext(), R.string.file_save_location, Toast.LENGTH_SHORT).show();
         } else {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{captureIntent});
         }

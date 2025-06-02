@@ -7,8 +7,8 @@ android {
         applicationId "com.dstukalov.videoconverter"
         minSdkVersion 18
         targetSdkVersion 32
-        versionCode 3
-        versionName "1.4"
+        versionCode 4
+        versionName "1.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
