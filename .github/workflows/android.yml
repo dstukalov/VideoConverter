@@ -46,7 +46,8 @@ jobs:
 
       # Decode and generate keystore.jks
       - name: Decode keystore and save to file
-        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
 
       # Run Build Project
       - name: Build gradle project
