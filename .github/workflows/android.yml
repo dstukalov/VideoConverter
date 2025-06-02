@@ -1,13 +1,13 @@
 # Code taken from https://medium.com/@myofficework000/automating-android-apk-aab-generation-with-github-actions-0910888de1b1
 ##
-name: Generated APK (Upload - Create Artifact To Github Action)
+name: Generated APK (upload to artifact and release)
 
 env:
   # The name of the main module repository
   main_project_module: demo
 
-  # The name of the Play Store
-  playstore_name: github
+  # The name of the Store
+  store_name: github
 
 on:
 
@@ -34,6 +34,14 @@ jobs:
       - name: Set repository name as env variable
         run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
 
+      # Get Version Name from build gradle
+      - name: Extract version name from build.gradle
+        id: version
+        run: |
+          versionName=$(grep versionName demo/build.gradle | head -n 1 | awk -F\" '{print $2}')
+          echo "VERSION_NAME=$versionName" >> $GITHUB_ENV
+
+
       - name: Set Up JDK
         uses: actions/setup-java@v4
         with:
@@ -47,10 +55,14 @@ jobs:
       # Decode and generate keystore.jks
       - name: Decode keystore and save to file
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > /demo/keystore.jks
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > /home/runner/work/VideoConverter/VideoConverter/demo/keystore.jks
 
       # Run Build Project
       - name: Build gradle project
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
         run: ./gradlew build
 
       # Create APK Debug
@@ -67,7 +79,12 @@ jobs:
 
       # Delete keystore.jks after build is complete
       - name: Clean up keystore
-        run: rm keystore.jks
+        run: rm /home/runner/work/VideoConverter/VideoConverter/demo/keystore.jks
+
+      # Rename apk with useful info
+      - name: Rename APK
+        run: |
+          mv "${{ env.main_project_module }}/build/outputs/apk/release/demo-release.apk" "${{ env.main_project_module }}/build/outputs/apk/release/${{ env.repository_name }}-${{ env.store_name }}-${{ env.date_today }}-v${{ env.VERSION_NAME }}.apk"
 
       # Upload Artifact Build
       # Noted For Output [main_project_module]/build/outputs/apk/debug/
@@ -81,5 +98,15 @@ jobs:
       - name: Upload APK Release - ${{ env.repository_name }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) release generated
-          path: ${{ env.main_project_module }}/build/outputs/apk/release/
+          name: ${{ env.repository_name }}-${{ env.store_name }}-${{ env.date_today }}-v${{ env.VERSION_NAME }}
+          path: ${{ env.main_project_module }}/build/outputs/apk/release/${{ env.repository_name }}-${{ env.store_name }}-${{ env.date_today }}-v${{ env.VERSION_NAME }}.apk
+
+      # Upload apk to Release
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ env.repository_name }}-${{ env.date_today }}-v${{ env.VERSION_NAME }}
+          tag_name: v${{ env.VERSION_NAME }}
+          files: ${{ env.main_project_module }}/build/outputs/apk/release/${{ env.repository_name }}-${{ env.store_name }}-${{ env.date_today }}-v${{ env.VERSION_NAME }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
