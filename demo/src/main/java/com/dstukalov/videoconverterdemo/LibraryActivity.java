@@ -361,7 +361,12 @@ public class LibraryActivity extends AppCompatActivity {
             } catch (Exception ignore) {
             }
 
-            mediaMetadataRetriever.release();
+            try {
+                mediaMetadataRetriever.release();
+            } catch (
+                    IOException e) {
+                Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+    }
             return bitmap == null ? null : new Result(bitmap, Picasso.LoadedFrom.DISK);
         }
     }

@@ -194,8 +194,12 @@ public class MainViewModel extends AndroidViewModel {
                     result.file = null;
                 }
             }
-            mmr.release();
-        }
+            try {
+                mmr.release();
+            } catch (IOException e) {
+                Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+            }
+    };
         Log.i(TAG, "result " + result.file + " " + result.width + "x" + result.height + " " + result.duration + "ms");
         return result;
     }

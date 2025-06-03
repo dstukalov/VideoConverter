@@ -29,7 +29,7 @@
     <string name="quality_1440p_h265_9000kbps">1440p, H265, 9000kbps</string>
     <string name="quality_2160p_h265_12000kbps">2160p, H265, 12000kbps</string>
     <string name="video_preview">Video preview</string>
-    <string name="file_save_location">Saved To: /sdcard/Android/data/com.dstukalov.videoconverter/files/</string>
+    <string name="file_save_location">Saved To: /Android/data/com.dstukalov.videoconverter/</string>
     <string name="converted_videos">Converted videos</string>
     <string name="no_converted_videos">No converted videos</string>
     <string name="delete">Delete</string>
