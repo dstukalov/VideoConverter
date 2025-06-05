@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Video converter</string>
+    <string name="app_name">Video Converter</string>
     <string name="convert">Convert this video</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>

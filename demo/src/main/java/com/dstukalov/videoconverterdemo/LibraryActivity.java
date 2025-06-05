@@ -175,6 +175,7 @@ public class LibraryActivity extends AppCompatActivity {
         final ImageView thumbnailView;
         final TextView durationView;
         final ImageView selectionView;
+        final TextView fileNameTextView;
 
         VideoViewHolder(@NonNull final View itemView) {
             super(itemView);
@@ -182,6 +183,7 @@ public class LibraryActivity extends AppCompatActivity {
             thumbnailView = itemView.findViewById(R.id.thumbnail);
             durationView = itemView.findViewById(R.id.duration);
             selectionView = itemView.findViewById(R.id.selection);
+            fileNameTextView = itemView.findViewById(R.id.filename);
         }
     }
 
@@ -218,6 +220,9 @@ public class LibraryActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
             final File file = differ.getCurrentList().get(position);
+            if (holder.fileNameTextView != null) {
+                holder.fileNameTextView.setText(file.getName());
+            }
             holder.contentView.setOnClickListener(v -> onItemClicked(holder, file));
             holder.contentView.setOnLongClickListener(v -> {
                 onItemLongClicked(holder, file);
@@ -244,9 +249,13 @@ public class LibraryActivity extends AppCompatActivity {
             final int size = getResources().getDimensionPixelSize(R.dimen.library_item_grid_size);
             final Uri uri = Uri.fromFile(file);
             holder.durationView.setText("");
+            // Define your desired corner radius in dp
+            float cornerRadiusDp = 16f; // For example, 8dp. Adjust as you like.
+
             Picasso.get().load(uri)
                     .resize(size, size)
                     .centerCrop()
+                    .transform(new RoundedCornersTransformation(cornerRadiusDp))
                     .into(holder.thumbnailView, new Callback() {
                         @Override
                         public void onSuccess() {
@@ -261,6 +270,7 @@ public class LibraryActivity extends AppCompatActivity {
                         @Override
                         public void onError(Exception e) {
                             holder.durationView.setText("");
+                            holder.fileNameTextView.setText("");
                         }
                     });
         }

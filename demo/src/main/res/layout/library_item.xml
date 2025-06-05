@@ -5,14 +5,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#404040"
+    android:background="@drawable/rounded_corners_bg"
     tools:layout_width="@dimen/library_item_grid_size"
     tools:layout_height="@dimen/library_item_grid_size">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_corners_bg">
 
         <ImageView
             android:id="@+id/thumbnail"
@@ -23,6 +24,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
+            android:background="@drawable/rounded_seekbar_corners_bg"
             android:contentDescription="@string/video_preview" />
 
         <TextView
@@ -31,13 +33,30 @@
             android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintRight_toRightOf="parent"
-            android:padding="4dp"
-            android:textSize="13.5sp"
+            android:paddingTop="5dp"
+            android:paddingRight="10dp"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
             android:shadowRadius="2"
             android:shadowColor="@android:color/black"
             tools:text="0:23"/>
+
+        <TextView
+            android:id="@+id/filename"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="140dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:paddingBottom="5dp"
+            android:paddingRight="10dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:shadowRadius="3"
+            android:shadowColor="@android:color/black"
+            tools:text="long_long_filename_gibberish_promax.mp4"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

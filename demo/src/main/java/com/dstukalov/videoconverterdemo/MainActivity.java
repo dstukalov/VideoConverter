@@ -28,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
 import androidx.lifecycle.ViewModelProvider;
@@ -108,6 +109,37 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate");
 
         setContentView(R.layout.main);
+
+        ActionBar actionBar = getSupportActionBar();
+
+        if (actionBar != null) {
+            // 1. Set the logo
+            actionBar.setLogo(R.drawable.ic_launcher_actionbar); // Replace your_app_logo with your drawable resource ID
+
+            // 2. Display the logo
+            actionBar.setDisplayUseLogoEnabled(true);
+
+            // 3. Show the title (app name)
+            // This is usually true by default, but good to be explicit
+            actionBar.setDisplayShowTitleEnabled(true);
+
+            // Optional: If you also want the "home" button (logo area) to be clickable
+            // and act as an "up" button (though for MainActivity, it usually just goes to home).
+            // actionBar.setDisplayHomeAsUpEnabled(true); // This will show a back arrow by default
+            // if you don't also set DisplayUseLogoEnabled.
+            // With DisplayUseLogoEnabled, it prioritizes the logo.
+
+            // To ensure the logo is shown instead of just an up arrow if setDisplayHomeAsUpEnabled is true:
+            // This tells the ActionBar to show the custom logo specified by setLogo()
+            // rather than the default home icon (which is usually an arrow for up navigation).
+            actionBar.setDisplayShowHomeEnabled(true);
+
+
+            // You can also set the title programmatically if needed,
+            // though it usually defaults to your app_name string resource
+            // actionBar.setTitle(R.string.your_app_name_custom);
+        }
+    // ... rest of your MainActivity
 
         mConverter = Converter.getInstance(getApplication());
 
@@ -223,6 +255,7 @@ public class MainActivity extends AppCompatActivity {
                             Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
 
                     mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000));
+                    Toast.makeText(getBaseContext(), R.string.file_save_location, Toast.LENGTH_LONG).show();
                 } else if (result.exception != null) {
                     Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
                     mElapsedTimeView.setText("");
@@ -423,7 +456,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (mConverter.isConverted()) {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{reselectIntent, captureIntent});
-            Toast.makeText(getBaseContext(), R.string.file_save_location, Toast.LENGTH_SHORT).show();
         } else {
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{captureIntent});
         }
