@@ -1,11 +1,21 @@
 # Notes Specific To This Repo
 I am not an actual app developer, so my fix and additions will be limited to what can be done.
 
-I will primarily work on demo app, potentially adding feature, changing layout or theme
+I will primarily work on demo app, potentially adding feature, changing layout or theme.
 
-I have already added extra options to resolution, bitrate and removed useless lower resolution to make room for extra variety in useful options
+I have already added extra options to resolution, bitrate and removed useless lower resolution to make room for extra variety in useful options.
 
-Next i will try to add features like saving video with original name and original modified time and saving them to a user accessible location instead of /sdcard/Android/data
+Next i will try to add features like saving video with original name and original modified time and saving them to a user accessible location instead of /sdcard/Android/data .
+
+As of v1.9 most of the layout changes are finished and now i intend to work on how app handles video file, with this change app will move on to v2 with a new package name, new app name and probably a new icon as well.
+
+## NEW APP 
+![app-new](https://github.com/user-attachments/assets/7f2654bd-5031-429b-8ce5-f89562f43893)
+
+
+## OLD APP
+![app-old](https://github.com/user-attachments/assets/60be277a-3023-4eec-935e-8cb29ce1bfe3)
+
 ***
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter)
 [![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
