@@ -1,25 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Video Converter</string>
-    <string name="convert">Convert this video</string>
-    <string name="cancel">Cancel</string>
+    <string name="app_name">Video Compressor</string>
+    <string name="action_about">About App</string>
+    <string name="about_info_text">This project was originally created by dstukalov. I found this project in June of 2025 after it had been inactive for over three years. I forked the project to improve it. My initial focus was on updating its outdated UI, enable saving of processed videos to user accessible location, and adding more compression presets. I plan to continue improving the app with additional features and refinements as i deem fit.</string>
+    <string name="version_display_format">v%1$s ┇ Code (%2$s)</string>
+    <string name="version_name">%1$s</string>
+    <string name="important_info_text_message">\nHere is a quick guide:\n\n1. How it Works:\n   - Select a video you want to compress.\n   - Choose a compression preset (e.g., 720p, 1080p H265). Different presets offer different balances between file size and quality.\n   - Tap \'Compress this video\'. The app will process your video to reduce its file size.\n\n2. Where Videos are Stored:\n   - Compressed videos are saved in your device\'s main \'Movies\' folder, inside a subfolder named \'Compressed-Videos\'.\n   - You can access these videos using your phone\'s gallery app or any file manager.\n\n3. Creating Videos:\n   - The app creates a new, smaller video file. Your original video is NOT modified or deleted by the compression process.\n\n4. Deleting Videos:\n   - To delete compressed videos created by this app, navigate to the \'Compressed videos\' list within the app (if available) and use the delete option, OR\n   - Use your device\'s gallery or file manager to go to the \'Movies/Compressed-Videos/\' folder and delete files from there like any other file.\n\n5. Important Notes:\n   - Compression can take time, especially for long or high-resolution videos. The app will show progress.\n   - The actual final size and quality depend on the original video and the chosen preset.\n   - H.265 (HEVC) offers better compression but might not be compatible with all older devices or players.\n\nEnjoy using the app\!</string>
+    <string name="app_updated_text_message">\nHere is a quick guide:\n\n1. How it Works:\n   - Select a video you want to compress.\n   - Choose a compression preset (e.g., 720p, 1080p H265). Different presets offer different balances between file size and quality.\n   - Tap \'Compress this video\'. The app will process your video to reduce its file size.\n\n2. Where Videos are Stored:\n   - Compressed videos are saved in your device\'s main \'Movies\' folder, inside a subfolder named \'Compressed-Videos\'.\n   - You can access these videos using your phone\'s gallery app or any file manager.\n\n3. Creating Videos:\n   - The app creates a new, smaller video file. Your original video is NOT modified or deleted by the compression process.\n\n4. Deleting Videos:\n   - To delete compressed videos created by this app, navigate to the \'Compressed videos\' list within the app (if available) and use the delete option, OR\n   - Use your device\'s gallery or file manager to go to the \'Movies/Compressed-Videos/\' folder and delete files from there like any other file.\n\n5. Important Notes:\n   - Compression can take time, especially for long or high-resolution videos. The app will show progress.\n   - The actual final size and quality depend on the original video and the chosen preset.\n   - H.265 (HEVC) offers better compression but might not be compatible with all older devices or players.\n\nEnjoy using the app\!</string>
+    <string name="output_subdirectory_name">Compressed-Videos</string>
+    <string name="convert">Compress this video</string>
+    <string name="cancel">Cancel Compression</string>
     <string name="ok">OK</string>
     <string name="output_video">Output:</string>
     <string name="input_video">Input:</string>
-    <string name="conversion_not_supported">Video conversion is not supported by your phone</string>
-    <string name="conversion_in_progress">Conversion in progress</string>
-    <string name="please_select_video">Please select video</string>
-    <string name="select_video">Select video</string>
+    <string name="conversion_not_supported">Video compression is not supported by your phone</string>
+    <string name="conversion_in_progress">Compression is in progress</string>
+    <string name="please_select_video">Please select a video</string>
+    <string name="select_video">Select a video</string>
     <string name="reselect">Reselect</string>
-    <string name="play">Play</string>
-    <string name="pick_video">Pick video</string>
-    <string name="share">Share</string>
-    <string name="bad_video">Not a video</string>
+    <string name="play">Play video</string>
+    <string name="pick_video">Pick a video</string>
+    <string name="share">Share video</string>
+    <string name="bad_video">Not a video file</string>
     <string name="trim_info">%1$s - %2$s (duration %3$s)</string>
     <string name="video_info">%1$dx%2$d, %3$s, %4$s</string>
     <string name="video_info_output">%1$dx%2$d, %3$s, ~%4$s</string>
-    <string name="conversion_failed">Failed to convert</string>
+    <string name="conversion_failed">Failed to compress</string>
     <string name="seconds_elapsed">%d sec. elapsed</string>
     <string name="quality_720p">720p, 4000kbps</string>
     <string name="quality_720p_h265">720p, H265, 2000kbps</string>
@@ -29,8 +36,9 @@
     <string name="quality_1440p_h265_9000kbps">1440p, H265, 9000kbps</string>
     <string name="quality_2160p_h265_12000kbps">2160p, H265, 12000kbps</string>
     <string name="video_preview">Video preview</string>
-    <string name="file_save_location">Saved To: /Android/data/com.dstukalov.videoconverter/</string>
-    <string name="converted_videos">Converted videos</string>
-    <string name="no_converted_videos">No converted videos</string>
-    <string name="delete">Delete</string>
+    <string name="file_save_location">Saved To: /sdcard/Movies/Compressed-Videos/</string>
+    <string name="video_not_fully_loaded">Video not fully loaded yet</string>
+    <string name="converted_videos">Compressed videos</string>
+    <string name="no_converted_videos">No compressed videos</string>
+    <string name="delete">Delete video</string>
 </resources>

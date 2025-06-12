@@ -32,13 +32,13 @@ jobs:
 
       # Set Repository Name As Env Variable
       - name: Set repository name as env variable
-        run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
-
+        #run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+        run : echo "repository_name=VideoCompressor" >> $GITHUB_ENV
       # Get Version Name from build gradle
       - name: Extract version name from build.gradle
         id: version
         run: |
-          versionName=$(grep versionName demo/build.gradle | head -n 1 | awk -F\" '{print $2}')
+          versionName=$(grep 'def appVersionNameString =' demo/build.gradle | awk -F\" '{print $2}')
           echo "VERSION_NAME=$versionName" >> $GITHUB_ENV
 
 

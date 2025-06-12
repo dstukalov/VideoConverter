@@ -70,7 +70,6 @@
                     android:layout_height="48dp"
                     android:paddingLeft="8dp"
                     android:paddingRight="8dp"
-                    android:background="@drawable/rounded_seekbar_corners_bg"
                     />
 
             </FrameLayout>
@@ -210,8 +209,11 @@
                 android:layout_gravity="center"
                 android:minHeight="54dp"
                 android:text="@string/convert"
-                android:background="@drawable/rounded_blue_button_bg"
-                android:textSize="16sp" />
+                android:background="@drawable/rounded_button_bg"
+                android:foreground="@drawable/rounded_corners_button_fg"
+                android:textSize="16sp"
+                android:clickable="true"
+                android:focusable="true"/>
 
             <TextView
                 android:id="@+id/current_time"

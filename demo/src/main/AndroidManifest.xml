@@ -47,7 +47,13 @@
         <activity
             android:name=".LibraryActivity"
             android:exported="false"
+            android:theme="@style/AppTheme"
             android:label="@string/converted_videos"/>
+
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="@string/action_about"/>
 
         <provider
             android:name="androidx.core.content.FileProvider"

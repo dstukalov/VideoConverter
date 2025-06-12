@@ -1,14 +1,20 @@
 apply plugin: 'com.android.application'
+def appVersionCodeAsInteger = 7
+def appVersionNameString = "2.0"
 
 android {
     compileSdkVersion 34
 
     defaultConfig {
         applicationId "com.dstukalov.videoconverter"
-        minSdkVersion 18
-        targetSdkVersion 34
-        versionCode 6
-        versionName "1.9"
+        minSdkVersion 24
+        targetSdkVersion 32
+        versionCode appVersionCodeAsInteger
+        versionName appVersionNameString
+        // For versionCode (which is an Int), we need to ensure it's treated as a String for the resource value
+        resValue "string", "dynamic_version_code", "\"${appVersionCodeAsInteger}\""
+        resValue "string", "dynamic_version_name", "\"${appVersionNameString}\""
+        resValue "string", "app_id_string", "\"${applicationId}\""
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

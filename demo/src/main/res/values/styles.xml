@@ -7,7 +7,40 @@
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="popupMenuStyle">@style/CustomPopupMenuStyle</item>
         <item name="android:popupMenuStyle">@style/CustomPopupMenuStyle</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Link the custom ActionMode style to your main theme -->
+        <item name="actionModeStyle">@style/CustomActionModeStyle</item>
+        <!-- Optional: if you want a custom close/back arrow for ActionMode -->
+        <!-- <item name="actionModeCloseDrawable">@drawable/ic_your_custom_back_arrow</item> -->
+        <!-- Optional: To make ActionMode overlay the main ActionBar -->
+        <!-- <item name="windowActionModeOverlay">true</item> -->
     </style>
+
+    <!-- Custom ActionMode Style -->
+    <style name="CustomActionModeStyle" parent="Widget.AppCompat.ActionMode">
+        <item name="background">@color/primary</item> <!-- Use your app's primary color -->
+        <item name="titleTextStyle">@style/CustomActionModeTitleTextStyle</item>
+        <!-- If you use subtitles in ActionMode, style it too -->
+        <!-- <item name="subtitleTextStyle">@style/CustomActionModeSubtitleTextStyle</item> -->
+        <!-- You can also adjust height, etc. -->
+        <!-- <item name="height">?attr/actionBarSize</item> -->
+    </style>
+
+    <style name="CustomActionModeTitleTextStyle" parent="@style/TextAppearance.AppCompat.Widget.ActionMode.Title">
+        <!-- Assuming you want white or light text on your primary color background -->
+        <item name="android:textColor">@android:color/white</item>
+        <!-- You can also change text size, style, etc. -->
+        <!-- <item name="android:textSize">18sp</item> -->
+    </style>
+
+    <!-- Optional: If you had subtitles -->
+    <!--
+    <style name="CustomActionModeSubtitleTextStyle" parent="@style/TextAppearance.AppCompat.Widget.ActionMode.Subtitle">
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+    -->
 
     <style name="ActionBarButtonStyle" parent="@style/Widget.AppCompat.ActionButton">
 
@@ -18,5 +51,28 @@
 
     </style>
 
+    <!-- Custom Theme for AlertDialog -->
+    <style name="AppAlertDialogStyle" parent="Theme.AppCompat.Dialog.Alert">
+        <!-- Set the dialog's main window background -->
+        <item name="android:background">@drawable/rounded_corners_bg_about</item>
+        <item name="android:windowBackground">@drawable/rounded_corners_bg_about</item>
+        <item name="colorAccent">@color/accent</item> <!-- This will tint buttons in AppCompat dialogs -->
+        <item name="buttonBarPositiveButtonStyle">@style/AppAlertDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/AppAlertDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/AppAlertDialogButton</item>
+        <!-- Optional: Adjust text colors for title and message if needed -->
+        <!-- <item name="android:textColorPrimary">@color/your_title_text_color</item> -->
+        <!-- <item name="android:textColorSecondary">@color/your_message_text_color</item> -->
+    </style>
+
+    <style name="AppAlertDialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/accent</item> <!-- Sets button text to accent color -->
+    </style>
+
+    <style name="LogsMessageTextStyle">
+        <item name="android:textSize">13sp</item> <!-- Use 'sp' for text sizes for accessibility -->
+        <item name="android:textColor">@color/white_color</item> <!-- Optional: Set a specific color -->
+        <!-- Add other attributes like typeface, lineSpacingMultiplier etc. if needed -->
+    </style>
 
 </resources>

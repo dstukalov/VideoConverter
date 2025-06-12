@@ -9,12 +9,19 @@ Next i will try to add features like saving video with original name and origina
 
 As of v1.9 most of the layout changes are finished and now i intend to work on how app handles video file, with this change app will move on to v2 with a new package name, new app name and probably a new icon as well.
 
+Got App Icon from flaticons [Video icons created by vectaicon - Flaticon](https://www.flaticon.com/free-icons/video
+)
 ## NEW APP 
 ![app-new](https://github.com/user-attachments/assets/7f2654bd-5031-429b-8ce5-f89562f43893)
 
 
 ## OLD APP
 ![app-old](https://github.com/user-attachments/assets/60be277a-3023-4eec-935e-8cb29ce1bfe3)
+
+## Bugs 
+Any subsequent video loaded after first video wont load properly.
+To compress another video first close app fully then open and select new video.
+Make sure to play compressed video fully to ensure it was properly loaded and compressed .
 
 ***
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter)

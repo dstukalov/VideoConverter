@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 5,
-      "versionName": "1.7",
+      "versionCode": 7,
+      "versionName": "2.0",
       "outputFile": "demo-release.apk"
     }
   ],

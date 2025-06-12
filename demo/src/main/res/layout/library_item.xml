@@ -24,7 +24,6 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
-            android:background="@drawable/rounded_seekbar_corners_bg"
             android:contentDescription="@string/video_preview" />
 
         <TextView
@@ -44,19 +43,24 @@
 
         <TextView
             android:id="@+id/filename"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:maxWidth="140dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/thumbnail"
+            app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintHorizontal_bias="1.0"
+            android:gravity="end|bottom"
             android:paddingBottom="5dp"
-            android:paddingRight="10dp"
+            android:paddingEnd="10dp"
+            android:breakStrategy="simple"
+            android:hyphenationFrequency="none"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
-            android:shadowRadius="3"
+            android:shadowRadius="20"
             android:shadowColor="@android:color/black"
-            tools:text="long_long_filename_gibberish_promax.mp4"/>
+            tools:text="long_long_filename_gibberish_promax_ultrapro_(asdsafgsag).mp4"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
