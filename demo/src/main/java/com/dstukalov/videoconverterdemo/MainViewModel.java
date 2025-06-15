@@ -210,139 +210,6 @@ public class MainViewModel extends AndroidViewModel {
         return fileName;
     }
 
-    @Nullable
-    private static File copyContentUriToMoviesTemp(@NonNull Context context, @NonNull Uri uri, @NonNull String targetFileNameInMovies) {
-        InputStream inputStream = null;
-        OutputStream outputStream = null;
-        File outputFile = null;
-
-        // Get the subdirectory name from strings.xml
-        // Assuming R.string.output_subdirectory_name is "Compressed-Videos"
-        String subDirNameFromResource = context.getString(R.string.output_subdirectory_name);
-
-        try {
-            inputStream = context.getContentResolver().openInputStream(uri);
-            if (inputStream == null) {
-                Log.e(TAG, "Failed to open input stream for content URI: " + uri);
-                return null;
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentResolver resolver = context.getContentResolver();
-                Uri collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-
-                // **Step 1: Query and Delete Existing File with the Same Name in the Target Directory**
-                String selection = MediaStore.Video.Media.DISPLAY_NAME + "=? AND " +
-                        MediaStore.Video.Media.RELATIVE_PATH + " LIKE ?";
-                // Note: RELATIVE_PATH needs trailing slash for exact directory match with LIKE
-                String targetRelativePathForQuery = Environment.DIRECTORY_MOVIES + File.separator + subDirNameFromResource + File.separator;
-                String[] selectionArgs = { targetFileNameInMovies, targetRelativePathForQuery };
-
-                Cursor cursor = resolver.query(collection, new String[]{MediaStore.Video.Media._ID}, selection, selectionArgs, null);
-                if (cursor != null) {
-                    while (cursor.moveToNext()) {
-                        try {
-                            long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
-                            Uri existingItemUri = Uri.withAppendedPath(collection, String.valueOf(id));
-                            int deletedRows = resolver.delete(existingItemUri, null, null);
-                            if (deletedRows > 0) {
-                                Log.i(TAG, "Deleted existing MediaStore entry: " + existingItemUri + " for overwrite.");
-                            } else {
-                                Log.w(TAG, "Failed to delete existing MediaStore entry or it was already gone: " + existingItemUri);
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error deleting existing MediaStore item URI during overwrite attempt: " + targetFileNameInMovies, e);
-                            // Optional: Decide if you want to abort or continue if deletion fails.
-                            // If deletion fails, MediaStore might still create "tmp (1).mp4".
-                        }
-                    }
-                    cursor.close();
-                } else {
-                    Log.w(TAG, "MediaStore query for existing file returned null cursor: " + targetFileNameInMovies);
-                }
-
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, targetFileNameInMovies);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
-                // For insert, RELATIVE_PATH does not need a trailing slash
-                String targetRelativePathForInsert = Environment.DIRECTORY_MOVIES + File.separator + subDirNameFromResource;
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, targetRelativePathForInsert);
-                values.put(MediaStore.MediaColumns.IS_PENDING, 1);
-
-                Uri itemUri = resolver.insert(collection, values);
-
-                if (itemUri == null) {
-                    Log.e(TAG, "Failed to create new MediaStore entry for: " + targetFileNameInMovies + " after delete attempt.");
-                    return null;
-                }
-
-                outputStream = resolver.openOutputStream(itemUri);
-                if (outputStream == null) {
-                    Log.e(TAG, "Failed to get output stream for MediaStore URI: " + itemUri);
-                    resolver.delete(itemUri, null, null); // Clean up the newly created pending entry
-                    return null;
-                }
-
-                byte[] buffer = new byte[8 * 1024];
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
-                }
-                outputStream.flush();
-
-                values.clear();
-                values.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                resolver.update(itemUri, values, null, null);
-                Log.i(TAG, "Successfully copied (with overwrite logic) to MediaStore: " + itemUri.toString());
-
-                String path = getPathFromMediaStoreUri(context, itemUri);
-                if (path != null) {
-                    outputFile = new File(path);
-                    Log.i(TAG, "MediaStore path (Q+) after overwrite: " + path);
-                } else {
-                    Log.w(TAG, "Could not get a direct path for MediaStore URI (Q+) after overwrite: " + itemUri + ". The File object might not be directly usable by path.");
-                }
-
-            } else { // Pre-Android Q (FileOutputStream inherently overwrites)
-                File moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-                File targetSubDir = new File(moviesDir, subDirNameFromResource);
-                if (!targetSubDir.exists()) {
-                    if (!targetSubDir.mkdirs()) {
-                        Log.e(TAG, "Failed to create directory: " + targetSubDir.getAbsolutePath());
-                        return null;
-                    }
-                }
-                outputFile = new File(targetSubDir, targetFileNameInMovies);
-                // FileOutputStream by default truncates and overwrites if the file exists.
-                outputStream = new FileOutputStream(outputFile);
-
-                byte[] buffer = new byte[8 * 1024];
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
-                }
-                outputStream.flush();
-                Log.i(TAG, "Successfully copied (with overwrite) to (pre-Q): " + outputFile.getAbsolutePath());
-            }
-            return outputFile;
-
-        } catch (IOException e) {
-            Log.e(TAG, "Error copying content URI to Movies folder: " + uri + " as " + targetFileNameInMovies, e);
-            if (outputFile != null && outputFile.exists() && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                //noinspection ResultOfMethodCallIgnored
-                outputFile.delete();
-            }
-            return null;
-        } finally {
-            try {
-                if (inputStream != null) inputStream.close();
-                if (outputStream != null) outputStream.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Error closing streams after copying to Movies folder", e);
-            }
-        }
-    }
-
     // Helper to attempt to get a path from a MediaStore URI (use with caution)
     @Nullable
     private static String getPathFromMediaStoreUri(@NonNull Context context, @NonNull Uri uri) {
@@ -368,23 +235,11 @@ public class MainViewModel extends AndroidViewModel {
         return null;
     }
 
-    @Nullable
-    public static String getPathFromContentUri(@NonNull Context context, @NonNull Uri contentUri) {
-        if (ContentResolver.SCHEME_FILE.equals(contentUri.getScheme())) { // Already a file URI
-            return contentUri.getPath();
-        }
-
-        Log.w(TAG, "getPathFromContentUri: Direct path resolution for content:// URIs is unreliable and often not possible. Prefer copying for content URIs.");
-
-        return null; // Default to null, indicating direct path not found/reliable.
-    }
-
-
     @WorkerThread
     private @NonNull LoadUriResult loadUriInBackground(@NonNull Uri uri) throws InterruptedException {
         final LoadUriResult result = new LoadUriResult();
         result.originalUri = uri;
-        result.originalFileName = getFileNameFromUri(getApplication(), uri); // Preserves original name
+        result.originalFileName = getFileNameFromUri(getApplication(), uri); // Retained
         Log.i(TAG, "ViewModel loading URI: " + uri.toString() + ". Original Filename: " + result.originalFileName);
 
         String scheme = uri.getScheme();
@@ -397,39 +252,45 @@ public class MainViewModel extends AndroidViewModel {
                 if (!result.file.exists() || !result.file.canRead()) {
                     Log.e(TAG, "File URI error: File does not exist or cannot be read: " + path);
                     result.error = "File scheme: File not found or not readable.";
-                    result.file = null;
+                    result.file = null; // Nullify if not valid
                 } else {
                     Log.i(TAG, "Successfully prepared direct file access for file://: " + result.file.getAbsolutePath());
-                    if (result.originalFileName == null && result.file != null) {
-                        result.originalFileName = result.file.getName();
-                    }
+                    // originalFileName is already set, but if it was null for some reason:
+                    if (result.originalFileName == null) result.originalFileName = result.file.getName();
                 }
             } else {
                 Log.e(TAG, "File URI error: Path is null.");
                 result.error = "File scheme: Invalid URI (null path).";
             }
         } else if (ContentResolver.SCHEME_CONTENT.equals(scheme)) {
-            Log.i(TAG, "Processing content:// URI. Will copy to Movies/Compressed-Videos/tmp.mp4");
+            Log.i(TAG, "Processing content:// URI. Attempting to get direct path.");
+            result.file = null; // Initialize to null
 
-            // The old getPathFromContentUri is unreliable and not needed if we always copy for content URIs.
-            // We will directly use our new copying method.
-            // String directPath = getPathFromContentUri(getApplication(), uri); // Less reliable
-            // if (directPath != null && new File(directPath).canRead()) { ... }
+            // Attempt to get a direct path using the existing helper method
+            String directPath = getPathFromContentUri(getApplication(), uri);
 
-            // Always copy content URIs to the designated public location for this use case.
-            // Use a fixed name "tmp.mp4" as requested for the file in the public directory.
-            String targetFileNameInMovies = "tmp.mp4";
-            result.file = copyContentUriToMoviesTemp(getApplication(), uri, targetFileNameInMovies);
-
-            if (result.file == null || !result.file.exists()) { // Check if copy failed or file is not accessible
-                result.error = "Content scheme: Failed to copy video to " + Environment.DIRECTORY_MOVIES + "/Compressed-Videos/" + targetFileNameInMovies;
-                Log.e(TAG, result.error + " (URI: " + uri + ")");
-                result.file = null; // Ensure file is null on error
+            if (directPath != null) {
+                Log.i(TAG, "Attempting to use direct path from content URI: " + directPath);
+                File potentialFile = new File(directPath);
+                if (potentialFile.exists() && potentialFile.canRead()) {
+                    result.file = potentialFile;
+                    Log.i(TAG, "Successfully obtained readable direct file path: " + result.file.getAbsolutePath());
+                    // originalFileName is already set, but if it was null for some reason:
+                    if (result.originalFileName == null) result.originalFileName = result.file.getName();
+                } else {
+                    Log.w(TAG, "Direct path obtained (" + directPath + ") but file doesn't exist or not readable. Will fall back to URI.");
+                    // result.file remains null, will use URI for metadata
+                }
             } else {
-                Log.i(TAG, "Successfully copied content:// to public file: " + result.file.getAbsolutePath());
-                // result.originalFileName is already set from getFileNameFromUri earlier.
-                // If the copied file name ("tmp.mp4") needs to be stored distinctly from originalFileName,
-                // LoadUriResult would need another field. For now, result.file points to "tmp.mp4".
+                Log.w(TAG, "Could not obtain a direct path for content URI. Will use URI directly for metadata.");
+                // result.file remains null, will use URI for metadata
+            }
+
+            if (result.file == null && result.originalUri == null) { // Should not happen with originalUri
+                result.error = "Content scheme: Original URI is null and no direct path obtained.";
+                Log.e(TAG, result.error + " (URI: " + uri + ")");
+            } else if (result.file == null) {
+                Log.i(TAG, "Content URI will be used directly for metadata (no valid direct path): " + result.originalUri.toString());
             }
 
         } else {
@@ -437,65 +298,182 @@ public class MainViewModel extends AndroidViewModel {
             result.error = "Unsupported URI scheme: " + scheme;
         }
 
-        // Metadata Extraction (only if result.file is valid and accessible)
-        if (result.file != null && result.file.exists() && result.file.canRead()) { // Added canRead() check
-            result.fileLength = result.file.length();
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            try {
-                // For Android Q+ and MediaStore URIs, using a FileDescriptor is safer if available.
-                // If result.file.getAbsolutePath() doesn't work for MediaStore URIs (common on Q+ if it's not a real path),
-                // you'd need to open a FileDescriptor from the original content URI or the new MediaStore URI.
-                // This example assumes getPathFromMediaStoreUri gave a usable path or it's pre-Q.
-                retriever.setDataSource(result.file.getAbsolutePath());
-                // ... (rest of metadata extraction remains the same) ...
-                String widthStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
-                String heightStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
-                String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                String rotationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+        // --- Metadata Extraction ---
+        // This part now intelligently chooses between result.file (if available)
+        // and result.originalUri (if result.file is null, especially for content URIs)
 
-                if (widthStr != null && heightStr != null && durationStr != null) {
-                    result.width = Integer.parseInt(widthStr);
-                    result.height = Integer.parseInt(heightStr);
-                    result.duration = Long.parseLong(durationStr);
-                    int rotation = 0;
-                    if (rotationStr != null) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        android.os.ParcelFileDescriptor pfd = null; // Declare pfd here to close in finally
+
+        try {
+            if (result.file != null && result.file.exists() && result.file.canRead()) {
+                // This path is for FILE URIs OR if we successfully got a *readable direct path* from a CONTENT URI
+                Log.i(TAG, "Extracting metadata using file path: " + result.file.getAbsolutePath());
+                result.fileLength = result.file.length();
+                retriever.setDataSource(result.file.getAbsolutePath());
+            } else if (result.originalUri != null && ContentResolver.SCHEME_CONTENT.equals(result.originalUri.getScheme())) {
+                // Fallback for CONTENT URIs if direct path wasn't available or readable
+                Log.i(TAG, "Extracting metadata using content URI and FileDescriptor: " + result.originalUri.toString());
+                pfd = getApplication().getContentResolver().openFileDescriptor(result.originalUri, "r");
+                if (pfd != null) {
+                    retriever.setDataSource(pfd.getFileDescriptor());
+                    Cursor cursor = getApplication().getContentResolver().query(result.originalUri, new String[]{MediaStore.MediaColumns.SIZE}, null, null, null);
+                    if (cursor != null) {
                         try {
-                            rotation = Integer.parseInt(rotationStr);
-                        } catch (NumberFormatException e) {
-                            Log.w(TAG, "Invalid rotation value: " + rotationStr);
+                            if (cursor.moveToFirst()) {
+                                int sizeIndex = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE);
+                                if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) {
+                                    result.fileLength = cursor.getLong(sizeIndex);
+                                } else {
+                                    Log.w(TAG, "Size column not found or is null for content URI: " + result.originalUri);
+                                }
+                            }
+                        } finally {
+                            cursor.close();
                         }
                     }
-                    if (rotation == 90 || rotation == 270) {
-                        int temp = result.width;
-                        result.width = result.height;
-                        result.height = temp;
-                    }
-                    Log.i(TAG, "Metadata: " + result.width + "x" + result.height + ", " + result.duration + "ms, Rotation: " + rotation);
                 } else {
-                    result.error = (result.error == null ? "" : result.error + " ") + "Failed to extract some video metadata components.";
-                    result.file = null;
+                    throw new IOException("Failed to open ParcelFileDescriptor for URI: " + result.originalUri);
                 }
-            } catch (Exception e) { // Catch broader exceptions for retriever
-                Log.e(TAG, "Failed to extract metadata", e);
-                result.error = (result.error == null ? "" : result.error + " ") + "Corrupted or unreadable video metadata.";
-                result.file = null;
-            } finally {
+            } else if (result.originalUri != null && ContentResolver.SCHEME_FILE.equals(result.originalUri.getScheme()) && result.file == null) {
+                Log.e(TAG, "Metadata extraction skipped: File URI was invalid and result.file is null.");
+                if (result.error == null) result.error = "File URI was invalid for metadata extraction.";
+                throw new IOException(result.error);
+            } else { // No valid source for retriever
+                if (result.error == null) result.error = "No valid source (file or content URI) for metadata extraction.";
+                throw new IOException(result.error != null ? result.error : "Unknown error before metadata extraction.");
+            }
+
+            // Common metadata extraction logic
+            String widthStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
+            String heightStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
+            String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+            String rotationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+
+            if (widthStr != null && heightStr != null && durationStr != null) {
+                result.width = Integer.parseInt(widthStr);
+                result.height = Integer.parseInt(heightStr);
+                result.duration = Long.parseLong(durationStr);
+                int rotation = 0;
+                if (rotationStr != null) {
+                    try {
+                        rotation = Integer.parseInt(rotationStr);
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "Invalid rotation value: " + rotationStr);
+                    }
+                }
+                if (rotation == 90 || rotation == 270) {
+                    int temp = result.width;
+                    result.width = result.height;
+                    result.height = temp;
+                }
+                Log.i(TAG, "Metadata: " + result.width + "x" + result.height + ", " + result.duration + "ms, Rotation: " + rotation + ", Length: " + result.fileLength);
+                // If we got here, metadata extraction was successful.
+                // Clear any "soft" error that might have been set if we fell back from direct path to URI.
+                if (result.error != null && (result.error.contains("Direct path obtained") || result.error.contains("Could not obtain a direct path"))) {
+                    result.error = null;
+                }
+            } else {
+                String metaError = "Failed to extract some video metadata components.";
+                result.error = (result.error == null ? metaError : result.error + ". " + metaError);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to extract metadata or access URI", e);
+            String extractionError = "Corrupted or unreadable video data/metadata";
+            if (e instanceof SecurityException) {
+                extractionError = "Permission denied accessing video content: " + e.getMessage();
+            } else if (e.getMessage() != null && e.getMessage().startsWith("Failed to open ParcelFileDescriptor")) {
+                extractionError = "Could not open video content: " + e.getMessage();
+            } else if (e.getMessage() != null) {
+                extractionError += ": " + e.getMessage();
+            }
+            result.error = (result.error == null ? extractionError : result.error + ". " + extractionError);
+        } finally {
+            try {
+                retriever.release();
+            } catch (IOException e) { // As of API 30, release() can throw IOException
+                Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+            }
+            if (pfd != null) {
                 try {
-                    retriever.release();
+                    pfd.close();
                 } catch (IOException e) {
-                    Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+                    Log.e(TAG, "Error closing ParcelFileDescriptor", e);
                 }
             }
-        } else {
-            if (result.file != null && (!result.file.exists() || !result.file.canRead())) {
-                Log.e(TAG, "File object exists but file system entry does not exist or cannot be read: " + result.file.getAbsolutePath());
-            }
-            if (result.error == null) { // If no error was set before, but file is not usable
-                result.error = "Video file could not be accessed or prepared for metadata extraction.";
-            }
-            Log.e(TAG, "Final check: File is null, does not exist, or not readable. Error: " + result.error);
-            result.file = null; // Ensure file is null if metadata extraction failed or file is bad
         }
+
+        if (result.error != null) {
+            Log.e(TAG, "Final check: LoadUriInBackground completed with error: " + result.error);
+            // If an error occurred and we had successfully assigned a direct file path to result.file,
+            // but that file then failed metadata extraction, result.file still points to it.
+            // The calling code MUST check result.error first.
+        } else if (result.file == null && result.originalUri == null) {
+            // This case should ideally be caught earlier and result.error set.
+            // It indicates an issue with URI processing that wasn't properly flagged.
+            result.error = "Unknown error: No valid file or URI after processing.";
+            Log.e(TAG, result.error);
+        }
+
+
         return result;
+    }
+
+    // Ensure getPathFromContentUri is present in your MainViewModel.java
+// It was already in your provided code, but for completeness:
+    @Nullable
+    public static String getPathFromContentUri(@NonNull Context context, @NonNull Uri contentUri) {
+        if (ContentResolver.SCHEME_FILE.equals(contentUri.getScheme())) {
+            return contentUri.getPath();
+        }
+
+        // This is the part that is unreliable and often returns null or an unusable path
+        // for many content URIs, especially on newer Android versions or from SAF.
+        Cursor cursor = null;
+        try {
+            // Try common columns for file path
+            String[] projection = {MediaStore.Images.Media.DATA, MediaStore.Video.Media.DATA, MediaStore.Audio.Media.DATA};
+            cursor = context.getContentResolver().query(contentUri, projection, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                // Try MediaStore.Video.Media.DATA first as it's a video app
+                int dataColumnIndex = cursor.getColumnIndex(MediaStore.Video.Media.DATA);
+                if (dataColumnIndex != -1 && !cursor.isNull(dataColumnIndex)) {
+                    return cursor.getString(dataColumnIndex);
+                }
+                // Try MediaStore.Images.Media.DATA (sometimes used for general media)
+                dataColumnIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
+                if (dataColumnIndex != -1 && !cursor.isNull(dataColumnIndex)) {
+                    return cursor.getString(dataColumnIndex);
+                }
+                // Try MediaStore.Audio.Media.DATA
+                dataColumnIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
+                if (dataColumnIndex != -1 && !cursor.isNull(dataColumnIndex)) {
+                    return cursor.getString(dataColumnIndex);
+                }
+                // If specific columns are not found, iterate through all columns to find "_data"
+                // This is a more desperate attempt.
+                for (String columnName : cursor.getColumnNames()) {
+                    if ("_data".equalsIgnoreCase(columnName)) {
+                        int genericDataColumnIndex = cursor.getColumnIndex(columnName);
+                        if (genericDataColumnIndex != -1 && !cursor.isNull(genericDataColumnIndex)) {
+                            String path = cursor.getString(genericDataColumnIndex);
+                            if (path != null && !path.isEmpty()) {
+                                Log.w(TAG, "Found path using generic '_data' column: " + path);
+                                return path;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error trying to get path from content URI: " + contentUri, e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        Log.w(TAG, "getPathFromContentUri: Direct path resolution failed for content:// URI: " + contentUri + ". This is common. Prefer using the URI directly with ContentResolver methods.");
+        return null; // Default to null, indicating direct path not found/reliable.
     }
 }

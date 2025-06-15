@@ -76,6 +76,8 @@ public class MainActivity extends AppCompatActivity {
     private MainViewModel mMainViewModel;
     private Uri mOutputUri; // To store the URI of the converted file (either FileProvider or MediaStore)
     private String mOutputDisplayName; // To store the display name, useful for MediaStore URIs
+    private TextView originalFilenameTextView;
+    private TextView outputFilenameTextView;
 
 
     private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
@@ -151,17 +153,21 @@ public class MainActivity extends AppCompatActivity {
 
         mMainLayout = findViewById(R.id.main);
         mLoadingProgressBar = findViewById(R.id.loading_progress_bar);
+        originalFilenameTextView = findViewById(R.id.original_filename_textview);
+        outputFilenameTextView = findViewById(R.id.output_filename_textview);
         mInputInfoView = findViewById(R.id.input_info);
         mOutputInfoView = findViewById(R.id.output_info);
         mElapsedTimeView = findViewById(R.id.current_time);
         mTimelineRangeBar = findViewById(R.id.range_seek_bar);
         mTimelineView = findViewById(R.id.video_thumbnails);
-
         mTrimInfo = findViewById(R.id.trim_info);
         mThumbView = findViewById(R.id.thumb);
         mConversionProgressBar = findViewById(R.id.progress_bar);
         mConversionProgressBar.setMax(100);
         mConvertButton = findViewById(R.id.convert);
+
+        mMainLayout.setVisibility(View.INVISIBLE); //initially set main layout invisible
+
         mConvertButton.setOnClickListener(v -> {
             if (mConverter.isConverted()) {
                 final Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -177,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.input_pick).setOnClickListener(v -> pickVideo());
+
 
         findViewById(R.id.input_play).setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -261,7 +268,8 @@ public class MainActivity extends AppCompatActivity {
                                 result.height,
                                 DateUtils.formatElapsedTime(result.duration / 1000),
                                 Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
-                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location) + (mOutputDisplayName != null ? "" + mOutputDisplayName : ""), Toast.LENGTH_LONG).show();
+                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location), Toast.LENGTH_LONG).show();
+                        mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
 
                     } else if (result.file != null) { // Pre-Q path, File object
                         // For File objects, always generate a FileProvider URI for sharing/viewing
@@ -279,13 +287,18 @@ public class MainActivity extends AppCompatActivity {
                                 DateUtils.formatElapsedTime(result.duration / 1000),
                                 Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
                         Toast.makeText(getBaseContext(),getString(R.string.file_save_location) + (mOutputDisplayName != null ? "" + mOutputDisplayName : ""), Toast.LENGTH_LONG).show();
+                        mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
+
                     } else {
                         mOutputUri = null; // Should not happen if isSuccess is true
                         mOutputDisplayName = null;
                         Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_SHORT).show();
+                        mElapsedTimeView.setText("");
+                        outputFilenameTextView.setText("Output: ");
+
                     }
 
-                    mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
+                    // mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
                  }
                 updateControls();
         });
@@ -465,8 +478,10 @@ public class MainActivity extends AppCompatActivity {
             final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
 
             mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
+            originalFilenameTextView.setText("Input: " + loadUriResult.originalFileName);
         } else {
             mOutputInfoView.setText(null);
+            originalFilenameTextView.setText("");
         }
     }
 
@@ -504,10 +519,13 @@ public class MainActivity extends AppCompatActivity {
             updateControls();
             estimateOutput();
             mElapsedTimeView.setText("");
+            outputFilenameTextView.setText("Output: ");
         } else {
             final Uri uri = data.getData();
             if (uri != null) {
                 loadUri(uri);
+                outputFilenameTextView.setText("Output: ");
+
             } else {
                 Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
                 if (!mMainViewModel.isUriLoaded()) {
@@ -708,7 +726,7 @@ public class MainActivity extends AppCompatActivity {
             originalFileNameWithoutExt = originalFileNameWithExt.substring(0, lastDot);
         }
         // Sanitize the original filename part to remove characters invalid for filenames
-        originalFileNameWithoutExt = originalFileNameWithoutExt.replaceAll("[^a-zA-Z0-9_.-]", "_");
+        // originalFileNameWithoutExt = originalFileNameWithoutExt.replaceAll("[^a-zA-Z0-9_.-]", "_");
 
 
         // 2. Get Video Width
@@ -732,7 +750,7 @@ public class MainActivity extends AppCompatActivity {
                 videoWidth + "p" + // Added "p" for pixels, e.g., "1280p"
                 Converter.CONVERTED_VIDEO_PREFIX + // Assuming this ends with an underscore or is clear
                 ".mp4";
-
+        outputFilenameTextView.setText("Output: " + fileName);
 
         Log.i(TAG, "Generated output filename: " + fileName);
 

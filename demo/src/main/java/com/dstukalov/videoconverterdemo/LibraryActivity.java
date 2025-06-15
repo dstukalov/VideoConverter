@@ -403,8 +403,8 @@ public class LibraryActivity extends AppCompatActivity {
                         final Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("video/*");
                         intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), MainActivity.FILE_PROVIDER_AUTHORITY, file));
-                        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(intent);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(Intent.createChooser(intent, "Share video using"));
                     } else if (itemId == R.id.id_delete) {
                         mViewModel.deleteFile(file);
                     }

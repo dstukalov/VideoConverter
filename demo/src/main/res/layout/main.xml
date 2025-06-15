@@ -86,6 +86,7 @@
                 android:visibility="invisible" />
 
             <LinearLayout
+                android:id="@+id/input_file_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="8dp"
@@ -103,12 +104,15 @@
                     android:orientation="vertical" >
 
                     <TextView
+                        android:id="@+id/original_filename_textview"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/input_video"
                         android:paddingLeft="8dp"
                         android:textColor="@android:color/white"
-                        android:textSize="16sp" />
+                        android:ellipsize="middle"
+                        android:maxLines="1"
+                        android:textSize="14sp"
+                        tools:text="Input: 20251024_151056_long_gibberish.mp4" />
 
                     <TextView
                         android:id="@+id/input_info"
@@ -156,12 +160,15 @@
                     android:orientation="vertical" >
 
                     <TextView
+                        android:id="@+id/output_filename_textview"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/output_video"
                         android:paddingLeft="8dp"
                         android:textColor="@android:color/white"
-                        android:textSize="16sp" />
+                        android:text="Output: "
+                        android:ellipsize="middle"
+                        android:maxLines="1"
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/output_info"
