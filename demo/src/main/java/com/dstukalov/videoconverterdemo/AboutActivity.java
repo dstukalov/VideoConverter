@@ -30,7 +30,7 @@ import java.util.List;
 
 
 public class AboutActivity extends AppCompatActivity {
-    private static final String TAG = "AboutActivity";
+    private static final String TAG = "USER_AboutActivity";
     private TextView seeAppLogsTextView;
 
     @Override
@@ -111,7 +111,7 @@ private void showImportantMessageDialog() {
     private void showLogsDialog(String logs) {
         ContextThemeWrapper themedContext = new ContextThemeWrapper(this, R.style.AppAlertDialogStyle);
         AlertDialog.Builder builder = new AlertDialog.Builder(themedContext);
-        builder.setTitle("App Logs (E/W/I)");
+        builder.setTitle("App Logs (E/W/I/D)");
 
         // Create a TextView for the logs to make them scrollable within the dialog
         final TextView messageTextView;
@@ -128,6 +128,7 @@ private void showImportantMessageDialog() {
         messageTextView.setPadding(50, 30, 50, 20);
         messageTextView.setTextIsSelectable(true);
 
+
         // It's good practice to make links clickable if any appear in logs
         Linkify.addLinks(messageTextView, Linkify.WEB_URLS | Linkify.EMAIL_ADDRESSES);
         messageTextView.setMovementMethod(LinkMovementMethod.getInstance());
@@ -137,7 +138,7 @@ private void showImportantMessageDialog() {
         ScrollView scrollView = new ScrollView(this);
         scrollView.addView(messageTextView);
         // You might want to limit the height of the ScrollView in the dialog
-        // scrollView.setLayoutParams(new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT, 800)); // Example: max height 800px
+        // scrollView.setLayoutParams(new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT, 600)); // Example: max height 800px
 
         builder.setView(scrollView);
 
@@ -197,12 +198,10 @@ private void showImportantMessageDialog() {
                 int maxLines = 1000; // Limit the number of lines to prevent performance issues
 
                 while ((line = bufferedReader.readLine()) != null && linesRead < maxLines) {
-                    if (line.contains("E/") || line.contains("W/") || line.contains("I/") ||
-                            line.contains(packageName) && (line.matches("^[IWE]/.*"))) { // Broader check
+                    if (line.contains("E/USER") || line.contains("W/USER") || line.contains("I/USER") || line.contains("D/USER")) {
                         String priorityChar = line.length() > 0 ? line.substring(0, 1) : "";
                             logBuilder.append(line).append("\n●➜ ");
                             linesRead++;
-
                     }
                 }
                 bufferedReader.close();

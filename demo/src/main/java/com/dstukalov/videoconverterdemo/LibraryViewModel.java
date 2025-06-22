@@ -22,7 +22,7 @@ import java.util.concurrent.Future;
 
 public class LibraryViewModel extends AndroidViewModel {
 
-    private static final String TAG = "LibraryViewModel";
+    private static final String TAG = "USER_LibraryViewModel";
 
     private final MutableLiveData<List<File>> mFiles = new MutableLiveData<>();
     private final Future<?> mLoadFilesRunnableFuture;

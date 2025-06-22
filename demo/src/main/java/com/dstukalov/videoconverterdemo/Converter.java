@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
@@ -35,7 +36,7 @@ import java.util.concurrent.Future;
 
 public class Converter {
 
-    private static final String TAG_CONVERTER = "Converter";
+    private static final String TAG_CONVERTER = "USER_Converter";
 
     public static final String CONVERTED_VIDEO_PREFIX = "-1";
 
@@ -87,11 +88,6 @@ public class Converter {
 
                 File actualOutputFileForConverter; // The file path the MediaConverter library will write to.
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // On Q+, converter writes to a temp cache file, which is then copied to MediaStore.
-                    // The 'targetOutputFileName' is used for the MediaStore display name.
-                    actualOutputFileForConverter = new File(application.getCacheDir(), "temp_conversion_" + System.currentTimeMillis() + ".mp4");
-                } else {
                     // Pre-Q, converter writes directly to the final public directory.
                     File moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
                     String subDirName = application.getString(R.string.output_subdirectory_name);
@@ -99,13 +95,13 @@ public class Converter {
                     if (!targetDir.exists()) {
                         if (!targetDir.mkdirs()) {
                             Log.e(TAG_CONVERTER, "Failed to create directory: " + targetDir.getAbsolutePath());
+                            Toast.makeText(application, "Failed to create directory: " + targetDir.getAbsolutePath(), Toast.LENGTH_LONG).show();
                             result.postValue(new Result(new IOException("Failed to create output directory: " + targetDir.getAbsolutePath())));
                             return; // Exit runnable
                         }
                     }
                     actualOutputFileForConverter = new File(targetDir, targetOutputFileName);
                     finalOutputFileForNotification = actualOutputFileForConverter; // This will be the final file
-                }
 
                 Log.d(TAG_CONVERTER, "MediaConverter will write to: " + actualOutputFileForConverter.getAbsolutePath());
 
@@ -134,50 +130,6 @@ public class Converter {
                     return; // Exit runnable
                 }
 
-                // If conversion successful:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // Copy the temporary converted file to MediaStore
-                    ContentResolver resolver = application.getContentResolver();
-                    ContentValues values = new ContentValues();
-                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, targetOutputFileName);
-                    values.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
-                    String subDirName = application.getString(R.string.output_subdirectory_name);
-                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + File.separator + subDirName);                    values.put(MediaStore.MediaColumns.IS_PENDING, 1);
-
-                    Uri collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-                    Uri itemUri = null;
-                    OutputStream os = null;
-
-                    try {
-                        itemUri = resolver.insert(collection, values);
-                        if (itemUri == null) {
-                            throw new IOException("Failed to create new MediaStore entry for " + targetOutputFileName);
-                        }
-                        os = resolver.openOutputStream(itemUri);
-                        if (os == null) {
-                            throw new IOException("Failed to get output stream for MediaStore URI: " + itemUri);
-                        }
-                        copyFileToOutputStream(actualOutputFileForConverter, os); // Helper method
-                        os.flush();
-
-                        values.clear();
-                        values.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                        resolver.update(itemUri, values, null, null);
-                        outputUriForNotification = itemUri;
-                        Log.i(TAG_CONVERTER, "Video copied to MediaStore: " + itemUri.toString());
-                    } finally {
-                        if (os != null) {
-                            try {
-                                os.close();
-                            } catch (IOException e) {
-                                Log.e(TAG_CONVERTER, "Error closing MediaStore output stream", e);
-                            }
-                        }
-                        if (actualOutputFileForConverter.exists()) {
-                            actualOutputFileForConverter.delete(); // Delete temp file after copy
-                        }
-                    }
-                }
                 // For pre-Q, actualOutputFileForConverter is already the final file (finalOutputFileForNotification)
 
                 long elapsedTime = System.currentTimeMillis() - taskStartTime;
@@ -186,7 +138,7 @@ public class Converter {
                 } else if (finalOutputFileForNotification != null) { // Pre-Q
                     result.postValue(new Result(finalOutputFileForNotification, elapsedTime));
                 } else {
-                    // Should not happen if conversion was successful and not cancelled
+                // Should not happen if conversion was successful and not cancelled
                     Log.e(TAG_CONVERTER, "Conversion reported success, but no output file/URI was set.");
                     result.postValue(new Result(new IOException()));
                 }

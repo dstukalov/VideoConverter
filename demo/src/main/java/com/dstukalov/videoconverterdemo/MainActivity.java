@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -50,7 +51,7 @@ import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "video-converter";
+    private static final String TAG = "USER_video-converter";
 
     public static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
 
@@ -97,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String NO_VERSION_SAVED = "NO_VERSION_SAVED"; // A default value
 
     // Tag for logging version check related messages
-    private static final String TAG_VERSION_CHECK = "MainActivityVersionCheck";
+    private static final String TAG_VERSION_CHECK = "USER_MainActivityVersionCheck";
     private final ActivityResultLauncher<Intent> pickVideoLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -176,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             } else if (mConverter.isConverting()) {
                 mConverter.cancel();
+                Log.i(TAG, "User pressed cancel compression button");
             } else {
                 convert();
             }
@@ -270,7 +272,14 @@ public class MainActivity extends AppCompatActivity {
                                 Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
                         Toast.makeText(getBaseContext(),getString(R.string.file_save_location), Toast.LENGTH_LONG).show();
                         mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
-
+                        // CORRECTED SCAN FOR PRE-Q (using the actual file path):
+                        if (result.file != null && result.file.exists()) {
+                            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                            Uri fileUri = Uri.fromFile(result.file); // Get a file:// URI for the actual file
+                            mediaScanIntent.setData(fileUri);
+                            getApplicationContext().sendBroadcast(mediaScanIntent);
+                            Log.i("USER_MediaScan", "MediaScanner scan requested for file: " + fileUri.toString());
+                        }
                     } else if (result.file != null) { // Pre-Q path, File object
                         // For File objects, always generate a FileProvider URI for sharing/viewing
                         mOutputUri = FileProvider.getUriForFile(
@@ -286,13 +295,22 @@ public class MainActivity extends AppCompatActivity {
                                 result.height,
                                 DateUtils.formatElapsedTime(result.duration / 1000),
                                 Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
-                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location) + (mOutputDisplayName != null ? "" + mOutputDisplayName : ""), Toast.LENGTH_LONG).show();
+                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location), Toast.LENGTH_LONG).show();
                         mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
-
+                        // CORRECTED SCAN FOR PRE-Q (using the actual file path):
+                        if (result.file != null && result.file.exists()) {
+                            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                            Uri fileUri = Uri.fromFile(result.file); // Get a file:// URI for the actual file
+                            mediaScanIntent.setData(fileUri);
+                            getApplicationContext().sendBroadcast(mediaScanIntent);
+                            Log.i("USER_MediaScan", "MediaScanner scan requested for file: " + fileUri.toString());
+                        }
                     } else {
                         mOutputUri = null; // Should not happen if isSuccess is true
                         mOutputDisplayName = null;
                         Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_SHORT).show();
+                        Log.e("TAG", "Conversion Failed for" + mOutputUri);
+
                         mElapsedTimeView.setText("");
                         outputFilenameTextView.setText("Output: ");
 
@@ -691,6 +709,7 @@ public class MainActivity extends AppCompatActivity {
         if (isFinishing() || isDestroyed()) { // Check if activity is still valid
             return;
         }
+        Log.d(TAG_VERSION_CHECK, "Showing dialog: " + title);
         ContextThemeWrapper themedContext = new ContextThemeWrapper(this, R.style.AppAlertDialogStyle);
         new AlertDialog.Builder(themedContext)
                 .setTitle(title)

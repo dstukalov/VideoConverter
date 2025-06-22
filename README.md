@@ -1,27 +1,38 @@
+
 # Notes Specific To This Repo
 I am not an actual app developer, so my fix and additions will be limited to what can be done.
 
-I will primarily work on demo app, potentially adding feature, changing layout or theme.
+I will primarily work on demo app, adding feature, changing layout or theme.
 
 I have already added extra options to resolution, bitrate and removed useless lower resolution to make room for extra variety in useful options.
 
-Next i will try to add features like saving video with original name and original modified time and saving them to a user accessible location instead of /sdcard/Android/data .
+~~Next i will try to add features like saving video with original name and original modified time and saving them to a user accessible location instead of /sdcard/Android/data .~~  **Done**
 
-As of v1.9 most of the layout changes are finished and now i intend to work on how app handles video file, with this change app will move on to v2 with a new package name, new app name and probably a new icon as well.
+~~As of v1.9 most of the layout changes are finished and now i intend to work on how app handles video file, with this change app will move on to v2 with a new package name, new app name and probably a new icon as well.~~  **Done**
 
-Got App Icon from flaticons [Video icons created by vectaicon - Flaticon](https://www.flaticon.com/free-icons/video
-)
-## NEW APP 
-![app-new](https://github.com/user-attachments/assets/7f2654bd-5031-429b-8ce5-f89562f43893)
+With v2.2 onwards app now directly accesses file from internal storage without caching, and writes compressed videos directly to /sdcard/Movies/Compressed-Videos
+
+## NEW APP
+![app-new](https://github.com/user-attachments/assets/1c202117-4ba3-4d95-b85f-49a891b0f705)
 
 
 ## OLD APP
-![app-old](https://github.com/user-attachments/assets/60be277a-3023-4eec-935e-8cb29ce1bfe3)
+![app-old](https://github.com/user-attachments/assets/146e901b-c8cc-4374-8c96-0231aacc1ae7)
 
-## Bugs 
-Any subsequent video loaded after first video wont load properly.
-To compress another video first close app fully then open and select new video.
-Make sure to play compressed video fully to ensure it was properly loaded and compressed .
+
+## Important things to consider
+• Big files have issues in compression (Something i cannot fix).
+
+• Files with same name will be overwritten.
+
+• Files are now directly read and written to internal storage without caching.
+
+• App is only tested on samsung devices running oneui 7 and oneui 6.
+
+• Thoroughly play compressed video before deleting original file.
+
+## Affiliations
+Got App Icon from flaticons [Video icons created by vectaicon - Flaticon](https://www.flaticon.com/free-icons/video)
 
 ***
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter)

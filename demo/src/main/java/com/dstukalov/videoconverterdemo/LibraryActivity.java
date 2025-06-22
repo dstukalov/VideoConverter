@@ -53,7 +53,7 @@ import okhttp3.Response;
 
 public class LibraryActivity extends AppCompatActivity {
 
-    private static final String TAG = "LibraryActivity";
+    private static final String TAG = "USER_LibraryActivity";
 
     private LibraryAdapter mAdapter;
     private LibraryViewModel mViewModel;

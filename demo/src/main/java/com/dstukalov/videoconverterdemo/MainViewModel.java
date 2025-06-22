@@ -40,7 +40,7 @@ import java.util.concurrent.Future;
 
 public class MainViewModel extends AndroidViewModel {
 
-    private static final String TAG = "LoadUriViewModel";
+    private static final String TAG = "USER_LoadUriViewModel";
 
     private final SavedStateHandle savedStateHandle;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();

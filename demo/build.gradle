@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
-def appVersionCodeAsInteger = 8
-def appVersionNameString = "2.1"
+def appVersionCodeAsInteger = 9
+def appVersionNameString = "2.2"
 
 android {
     compileSdkVersion 34
