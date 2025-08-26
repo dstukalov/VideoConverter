@@ -1,4 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <external-path name="external" path="."/>
+    <!--
+        This entry allows FileProvider to serve files from the subdirectory
+        defined via (R.string.output_subdirectory_name) within the
+        standard public 'Movies' directory on external storage.
+    -->
+    <external-path name="Compressed-Videos" path="Movies/Compressed-Videos/" />
+
+    <!--
+        If you might also pick files from other locations (e.g. Downloads, DCIM)
+        and need to share them via FileProvider (though less common for output files),
+        you would add paths for them here too.
+        Example for Downloads: -->
+        <external-path name="downloads" path="Download/" />
+
+
+    <!--
+        You might also have a cache path if you ever intend to share temporary files
+        from your app's cache via FileProvider, though your current converter logic
+        uses cache only for Q+ intermediate steps, not for direct sharing via FileProvider.
+        <cache-path name="my_cache" path="." />
+    -->
 </paths>

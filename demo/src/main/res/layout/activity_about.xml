@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <ImageView
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:src="@drawable/ic_launcher_about"
+            android:contentDescription="App Icon"
+            android:layout_marginBottom="5dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Video Compressor"
+            android:textColor="@color/white_color"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="2dp" />
+
+            <TextView
+            android:id="@+id/app_id_string"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_id_string"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="2dp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:id="@+id/improved_by_me"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/improved_by"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="2dp" />
+
+        <TextView
+            android:id="@+id/text_version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/version_display_format"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/important_info_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/important_info_string"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/text_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:text="@string/about_info_text"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:id="@+id/text_changelog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/latest_commits_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+        <TextView
+            android:id="@+id/text_my_repository"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/my_repo_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+        <TextView
+            android:id="@+id/text_original_repository"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dstukalov_repo_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+        <TextView
+            android:id="@+id/text_privacy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy_policy_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+        <TextView
+            android:id="@+id/text_license"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/project_license_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+        <TextView
+            android:id="@+id/see_app_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/apps_logs_string"
+            android:textColor="@color/white_color"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:background="@drawable/rounded_corners_bg_about"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/rounded_corners_fg"/>
+
+    </LinearLayout>
+</ScrollView>

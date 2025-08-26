@@ -5,14 +5,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#404040"
+    android:background="@drawable/rounded_corners_bg"
     tools:layout_width="@dimen/library_item_grid_size"
     tools:layout_height="@dimen/library_item_grid_size">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_corners_bg">
 
         <ImageView
             android:id="@+id/thumbnail"
@@ -31,13 +32,35 @@
             android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintRight_toRightOf="parent"
-            android:padding="4dp"
-            android:textSize="13.5sp"
+            android:paddingTop="5dp"
+            android:paddingRight="10dp"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
             android:shadowRadius="2"
             android:shadowColor="@android:color/black"
             tools:text="0:23"/>
+
+        <TextView
+            android:id="@+id/filename"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:maxWidth="140dp"
+            app:layout_constraintEnd_toEndOf="@id/thumbnail"
+            app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintHorizontal_bias="1.0"
+            android:gravity="end|bottom"
+            android:paddingBottom="5dp"
+            android:paddingEnd="10dp"
+            android:breakStrategy="simple"
+            android:hyphenationFrequency="none"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:shadowRadius="20"
+            android:shadowColor="@android:color/black"
+            tools:text="long_long_filename_gibberish_promax_ultrapro_(asdsafgsag).mp4"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

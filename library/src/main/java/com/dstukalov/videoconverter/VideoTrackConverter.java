@@ -117,8 +117,8 @@ class VideoTrackConverter {
             outputWidth = width * outputHeight / height;
         }
         // many encoders do not work when height and width are not multiple of 16 (also, some iPhones do not play some heights)
-        outputHeight = (outputHeight + 7) & ~0xF;
-        outputWidth = (outputWidth + 7) & ~0xF;
+        // outputHeight = (outputHeight + 7) & ~0xF;
+        // outputWidth = (outputWidth + 7) & ~0xF;
 
         final int outputWidthRotated;
         final int outputHeightRotated;

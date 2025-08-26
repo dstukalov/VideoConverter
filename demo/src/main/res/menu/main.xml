@@ -5,4 +5,10 @@
         android:title="@string/converted_videos"
         android:icon="@drawable/ic_library"
         app:showAsAction="always"/>
+    <item
+        android:id="@+id/action_launch_about"
+        android:icon="@drawable/ic_action_about"
+        android:title="@string/action_about"
+        android:orderInCategory="100"
+        app:showAsAction="always" />
 </menu>

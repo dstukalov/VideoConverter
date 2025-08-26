@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#34ffffff"> <!-- This is the ripple color -->
+
+    <!-- Mask: This is the important part.
+         The ripple will be clipped to the shape of this mask.
+         We use a shape identical to the background for the mask. -->
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" /> <!-- Mask color, can be any solid color -->
+            <corners android:radius="16dp" /> <!-- SAME radius as your background -->
+        </shape>
+    </item>
+
+
+</ripple>

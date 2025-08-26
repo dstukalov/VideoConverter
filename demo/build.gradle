@@ -1,20 +1,37 @@
 apply plugin: 'com.android.application'
+def appVersionCodeAsInteger = 9
+def appVersionNameString = "2.2"
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 34
 
     defaultConfig {
         applicationId "com.dstukalov.videoconverter"
-        minSdkVersion 18
+        minSdkVersion 24
         targetSdkVersion 32
-        versionCode 3
-        versionName "1.3"
+        versionCode appVersionCodeAsInteger
+        versionName appVersionNameString
+        // For versionCode (which is an Int), we need to ensure it's treated as a String for the resource value
+        resValue "string", "dynamic_version_code", "\"${appVersionCodeAsInteger}\""
+        resValue "string", "dynamic_version_name", "\"${appVersionNameString}\""
+        resValue "string", "app_id_string", "\"${applicationId}\""
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword System.getenv("SIGNING_STORE_PASSWORD")
+            keyAlias System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

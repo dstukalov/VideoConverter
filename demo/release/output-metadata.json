@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.dstukalov.videoconverter",
+  "variantName": "release",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 9,
+      "versionName": "2.2",
+      "outputFile": "demo-release.apk"
+    }
+  ],
+  "elementType": "File"
+}

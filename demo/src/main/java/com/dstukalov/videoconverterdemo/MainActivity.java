@@ -2,8 +2,13 @@ package com.dstukalov.videoconverterdemo;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -28,6 +33,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ContextThemeWrapper;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
 import androidx.lifecycle.ViewModelProvider;
@@ -35,6 +43,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.dstukalov.videoconverter.MediaConverter;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -42,7 +51,7 @@ import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "video-converter";
+    private static final String TAG = "USER_video-converter";
 
     public static final String FILE_PROVIDER_AUTHORITY = "com.dstukalov.videoconverter.fileprovider";
 
@@ -64,17 +73,32 @@ public class MainActivity extends AppCompatActivity {
 
     private @Nullable FramePreview mFramePreview;
     private Converter mConverter;
-    private ConversionParameters mConversionParameters = CONV_PARAMS_360P;
+    private ConversionParameters mConversionParameters = CONV_PARAMS_1080P_H265_6000kbps;
     private MainViewModel mMainViewModel;
+    private Uri mOutputUri; // To store the URI of the converted file (either FileProvider or MediaStore)
+    private String mOutputDisplayName; // To store the display name, useful for MediaStore URIs
+    private TextView originalFilenameTextView;
+    private TextView outputFilenameTextView;
 
-    private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, MediaConverter.VIDEO_CODEC_H264, 1333000, 64000);
-    private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, MediaConverter.VIDEO_CODEC_H264, 2000000, 96000);
-    private static final ConversionParameters CONV_PARAMS_480P = new ConversionParameters(480, MediaConverter.VIDEO_CODEC_H264, 2666000, 128000);
+
     private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
     private static final ConversionParameters CONV_PARAMS_720P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  2000000, 192000);
     private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P_H265_3000kbps = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1080P_H265_6000kbps = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  6000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_1440P_H265_9000kbps = new ConversionParameters(1440, MediaConverter.VIDEO_CODEC_H265,  9000000, 192000);
+    private static final ConversionParameters CONV_PARAMS_2160P_H265_12000kbps = new ConversionParameters(2160, MediaConverter.VIDEO_CODEC_H265,  12000000, 192000);
 
+
+    private SharedPreferences sharedPreferences;
+
+    // Define SharedPreferences constants
+    private static final String PREFS_NAME = "AppVersionPrefs";
+    private static final String PREF_LAST_RUN_VERSION_NAME = "last_run_version_name";
+    private static final String NO_VERSION_SAVED = "NO_VERSION_SAVED"; // A default value
+
+    // Tag for logging version check related messages
+    private static final String TAG_VERSION_CHECK = "USER_MainActivityVersionCheck";
     private final ActivityResultLauncher<Intent> pickVideoLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -91,11 +115,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-                    .detectAll()
-                    .penaltyDeathOnNetwork()
-                    .penaltyLog()
-                    .penaltyFlashScreen()
-                    .penaltyDeath()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()   // or .detectAll() for all detectable problems
+                    .penaltyLog()     // Log it but don't crash
                     .build());
 
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
@@ -106,32 +129,55 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
         setContentView(R.layout.main);
+
+        ActionBar actionBar = getSupportActionBar();
+
+        if (actionBar != null) {
+            // 1. Set the logo
+            actionBar.setLogo(R.drawable.ic_launcher_actionbar); // Replace your_app_logo with your drawable resource ID
+
+            // 2. Display the logo
+            actionBar.setDisplayUseLogoEnabled(true);
+
+            // 3. Show the title (app name)
+            // This is usually true by default, but good to be explicit
+            actionBar.setDisplayShowTitleEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+
+            // actionBar.setTitle(R.string.your_app_name_custom);
+        }
 
         mConverter = Converter.getInstance(getApplication());
 
         mMainLayout = findViewById(R.id.main);
         mLoadingProgressBar = findViewById(R.id.loading_progress_bar);
+        originalFilenameTextView = findViewById(R.id.original_filename_textview);
+        outputFilenameTextView = findViewById(R.id.output_filename_textview);
         mInputInfoView = findViewById(R.id.input_info);
         mOutputInfoView = findViewById(R.id.output_info);
         mElapsedTimeView = findViewById(R.id.current_time);
         mTimelineRangeBar = findViewById(R.id.range_seek_bar);
         mTimelineView = findViewById(R.id.video_thumbnails);
-
         mTrimInfo = findViewById(R.id.trim_info);
         mThumbView = findViewById(R.id.thumb);
         mConversionProgressBar = findViewById(R.id.progress_bar);
         mConversionProgressBar.setMax(100);
         mConvertButton = findViewById(R.id.convert);
+
+        mMainLayout.setVisibility(View.INVISIBLE); //initially set main layout invisible
+
         mConvertButton.setOnClickListener(v -> {
             if (mConverter.isConverted()) {
                 final Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()), "video/*");
+                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertedFile()), "video/*");
                 intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(intent);
             } else if (mConverter.isConverting()) {
                 mConverter.cancel();
+                Log.i(TAG, "User pressed cancel compression button");
             } else {
                 convert();
             }
@@ -139,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.input_pick).setOnClickListener(v -> pickVideo());
+
 
         findViewById(R.id.input_play).setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -149,10 +196,10 @@ public class MainActivity extends AppCompatActivity {
 
         mOutputPlayButton = this.findViewById(R.id.output_play);
         mOutputPlayButton.setOnClickListener(v -> {
-            if (mConverter.isConverted()) {
+            if (mOutputUri != null) { // Check mOutputUri instead of mConverter.isConverted() directly
                 final Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()), "video/*");
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.setDataAndType(mOutputUri, "video/*");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // Crucial for content URIs and FileProvider
                 startActivity(intent);
             } else if (mConverter.isConverting()) {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
@@ -163,17 +210,16 @@ public class MainActivity extends AppCompatActivity {
 
         mOutputSendButton = this.findViewById(R.id.output_share);
         mOutputSendButton.setOnClickListener(v -> {
-            if (mConverter.isConverted()) {
+            if (mOutputUri != null) { // Check mOutputUri
                 final Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("video/*");
-                intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), FILE_PROVIDER_AUTHORITY, mConverter.getConvertFile()));
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(intent);
+                intent.putExtra(Intent.EXTRA_STREAM, mOutputUri);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // Crucial
+                startActivity(Intent.createChooser(intent, "Share video using"));
             } else if (mConverter.isConverting()) {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();
-            }
+                Toast.makeText(getBaseContext(), R.string.please_select_video, Toast.LENGTH_SHORT).show();            }
         });
 
         mOutputOptionsButton = this.findViewById(R.id.output_options);
@@ -215,23 +261,65 @@ public class MainActivity extends AppCompatActivity {
 
         mConverter.result.observe(this, result -> {
             if (result != null) {
-                if (result.file != null) {
-                    mOutputInfoView.setText(getString(R.string.video_info,
-                            result.width,
-                            result.height,
-                            DateUtils.formatElapsedTime(result.duration / 1000),
-                            Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
+                    if (result.uri != null) { // Q+ path, MediaStore URI
+                        mOutputUri = result.uri;
+                        mOutputDisplayName = result.displayName;
+                        Log.i(TAG, "Conversion successful. Output URI (MediaStore): " + mOutputUri);
+                        mOutputInfoView.setText(getString(R.string.video_info_output, // Use a different string if needed
+                                result.width, // Handle if width/height not set in Result
+                                result.height,
+                                DateUtils.formatElapsedTime(result.duration / 1000),
+                                Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
+                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location), Toast.LENGTH_LONG).show();
+                        mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
+                        // CORRECTED SCAN FOR PRE-Q (using the actual file path):
+                        if (result.file != null && result.file.exists()) {
+                            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                            Uri fileUri = Uri.fromFile(result.file); // Get a file:// URI for the actual file
+                            mediaScanIntent.setData(fileUri);
+                            getApplicationContext().sendBroadcast(mediaScanIntent);
+                            Log.i("USER_MediaScan", "MediaScanner scan requested for file: " + fileUri.toString());
+                        }
+                    } else if (result.file != null) { // Pre-Q path, File object
+                        // For File objects, always generate a FileProvider URI for sharing/viewing
+                        mOutputUri = FileProvider.getUriForFile(
+                                MainActivity.this,
+                                FILE_PROVIDER_AUTHORITY, // Make sure this matches your manifest
+                                result.file
+                        );
+                        mOutputDisplayName = result.file.getName();
+                        Log.i(TAG, "Conversion successful. Output URI (FileProvider): " + mOutputUri);
+                        // Update UI related to output info
+                        mOutputInfoView.setText(getString(R.string.video_info_output, // Use a different string if needed
+                                result.width, // Handle if width/height not set in Result
+                                result.height,
+                                DateUtils.formatElapsedTime(result.duration / 1000),
+                                Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
+                        Toast.makeText(getBaseContext(),getString(R.string.file_save_location), Toast.LENGTH_LONG).show();
+                        mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
+                        // CORRECTED SCAN FOR PRE-Q (using the actual file path):
+                        if (result.file != null && result.file.exists()) {
+                            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                            Uri fileUri = Uri.fromFile(result.file); // Get a file:// URI for the actual file
+                            mediaScanIntent.setData(fileUri);
+                            getApplicationContext().sendBroadcast(mediaScanIntent);
+                            Log.i("USER_MediaScan", "MediaScanner scan requested for file: " + fileUri.toString());
+                        }
+                    } else {
+                        mOutputUri = null; // Should not happen if isSuccess is true
+                        mOutputDisplayName = null;
+                        Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_SHORT).show();
+                        Log.e("TAG", "Conversion Failed for" + mOutputUri);
 
-                    mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000));
-                } else if (result.exception != null) {
-                    Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
-                    mElapsedTimeView.setText("");
-                }
+                        mElapsedTimeView.setText("");
+                        outputFilenameTextView.setText("Output: ");
+
+                    }
+
+                    // mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000)); // Assuming elapsedTime is in Result
+                 }
                 updateControls();
-            }
         });
-
-        updateControls();
     }
 
     @Override
@@ -260,11 +348,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.id_library: {
-                startActivity(new Intent(this, LibraryActivity.class));
-                return true;
-            }
+        int itemId = item.getItemId(); // Get item id once
+
+        if (itemId == R.id.id_library) {
+            Intent libraryIntent = new Intent(this, LibraryActivity.class);
+            startActivity(libraryIntent);
+            return true; // Return true to indicate the event was handled
+        } else if (itemId == R.id.action_launch_about) {
+            Intent aboutIntent = new Intent(this, AboutActivity.class);
+            startActivity(aboutIntent);
+            return true; // Return true to indicate the event was handled
         }
         return super.onOptionsItemSelected(item);
     }
@@ -274,39 +367,42 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenuInflater().inflate(R.menu.output_options, popup.getMenu());
         if (MediaConverter.selectCodec(MediaConverter.VIDEO_CODEC_H265) == null) {
             popup.getMenu().removeItem(R.id.quality_720p_h265);
-            popup.getMenu().removeItem(R.id.quality_1080p_h265);
+            popup.getMenu().removeItem(R.id.quality_1080p_h265_3000kbps);
+            popup.getMenu().removeItem(R.id.quality_1080p_h265_6000kbps);
+            popup.getMenu().removeItem(R.id.quality_1440p_h265_9000kbps);
+            popup.getMenu().removeItem(R.id.quality_2160p_h265_12000kbps);
         }
-        if (CONV_PARAMS_240P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_240p).setChecked(true);
-        } else if (CONV_PARAMS_360P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_360p).setChecked(true);
-        } else if (CONV_PARAMS_480P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_480p).setChecked(true);
-        } else if (CONV_PARAMS_720P.equals(mConversionParameters)) {
+        if (CONV_PARAMS_720P.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_720p).setChecked(true);
         } else if (CONV_PARAMS_720P_H265.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_720p_h265).setChecked(true);
         } else if (CONV_PARAMS_1080P.equals(mConversionParameters)) {
             popup.getMenu().findItem(R.id.quality_1080p).setChecked(true);
-        } else if (CONV_PARAMS_1080P_H265.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_1080p_h265).setChecked(true);
+        } else if (CONV_PARAMS_1080P_H265_3000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1080p_h265_3000kbps).setChecked(true);
+        } else if (CONV_PARAMS_1080P_H265_6000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1080p_h265_6000kbps).setChecked(true);
+        } else if (CONV_PARAMS_1440P_H265_9000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_1440p_h265_9000kbps).setChecked(true);
+        } else if (CONV_PARAMS_2160P_H265_12000kbps.equals(mConversionParameters)) {
+            popup.getMenu().findItem(R.id.quality_2160p_h265_12000kbps).setChecked(true);
         }
         popup.setOnMenuItemClickListener(item -> {
             final int itemId = item.getItemId();
-            if (itemId == R.id.quality_240p) {
-                mConversionParameters = CONV_PARAMS_240P;
-            } else if (itemId == R.id.quality_360p) {
-                mConversionParameters = CONV_PARAMS_360P;
-            } else if (itemId == R.id.quality_480p) {
-                mConversionParameters = CONV_PARAMS_480P;
-            } else if (itemId == R.id.quality_720p) {
+            if (itemId == R.id.quality_720p) {
                 mConversionParameters = CONV_PARAMS_720P;
             } else if (itemId == R.id.quality_720p_h265) {
                 mConversionParameters = CONV_PARAMS_720P_H265;
             } else if (itemId == R.id.quality_1080p) {
                 mConversionParameters = CONV_PARAMS_1080P;
-            } else if (itemId == R.id.quality_1080p_h265) {
-                mConversionParameters = CONV_PARAMS_1080P_H265;
+            } else if (itemId == R.id.quality_1080p_h265_3000kbps) {
+                mConversionParameters = CONV_PARAMS_1080P_H265_3000kbps;
+            } else if (itemId == R.id.quality_1080p_h265_6000kbps) {
+                mConversionParameters = CONV_PARAMS_1080P_H265_6000kbps;
+            } else if (itemId == R.id.quality_1440p_h265_9000kbps) {
+                mConversionParameters = CONV_PARAMS_1440P_H265_9000kbps;
+            } else if (itemId == R.id.quality_2160p_h265_12000kbps) {
+                mConversionParameters = CONV_PARAMS_2160P_H265_12000kbps;
             }
             Log.i(TAG, "onOutputOptions selected " + mConversionParameters);
             estimateOutput();
@@ -400,8 +496,10 @@ public class MainActivity extends AppCompatActivity {
             final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
 
             mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
+            originalFilenameTextView.setText("Input: " + loadUriResult.originalFileName);
         } else {
             mOutputInfoView.setText(null);
+            originalFilenameTextView.setText("");
         }
     }
 
@@ -416,6 +514,7 @@ public class MainActivity extends AppCompatActivity {
         pickIntent.setDataAndType(android.provider.MediaStore.Video.Media.INTERNAL_CONTENT_URI, "video/*");
         final Intent captureIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         final Intent reselectIntent = new Intent("com.dstukalov.videoconverter.intent.action.RESELECT", null);
+
         final Intent chooserIntent = Intent.createChooser(pickIntent, getString(R.string.select_video));
 
         if (mConverter.isConverted()) {
@@ -438,10 +537,13 @@ public class MainActivity extends AppCompatActivity {
             updateControls();
             estimateOutput();
             mElapsedTimeView.setText("");
+            outputFilenameTextView.setText("Output: ");
         } else {
             final Uri uri = data.getData();
             if (uri != null) {
                 loadUri(uri);
+                outputFilenameTextView.setText("Output: ");
+
             } else {
                 Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
                 if (!mMainViewModel.isUriLoaded()) {
@@ -487,7 +589,190 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void onInputDataLoadedAndUiReady() {
+        Log.d(TAG_VERSION_CHECK, "Input data loaded and UI is ready. Starting app version check task.");
+        // Start the AsyncTask to perform checks in the background
+        new CheckAppVersionTask(this).execute();
+    }
+
+    // Static inner class to prevent leaks, using WeakReference to access Activity
+    private static class CheckAppVersionTask extends AsyncTask<Void, Void, CheckAppVersionTask.VersionCheckResult> {
+
+        private final WeakReference<MainActivity> activityReference;
+
+        // Constructor
+        CheckAppVersionTask(MainActivity context) {
+            activityReference = new WeakReference<>(context);
+        }
+
+        // Helper class to hold the result of background work
+        static class VersionCheckResult {
+            final String dialogTitle;
+            final String dialogMessage;
+            final String currentVersionToSave; // Version to save after dialog
+
+            VersionCheckResult(String title, String message, String currentVersion) {
+                this.dialogTitle = title;
+                this.dialogMessage = message;
+                this.currentVersionToSave = currentVersion;
+            }
+        }
+
+        @Override
+        protected VersionCheckResult doInBackground(Void... voids) {
+            MainActivity activity = activityReference.get();
+            if (activity == null || activity.isFinishing()) {
+                return null; // Activity is gone, no work to do
+            }
+
+            String importantInfoTextMessage = activity.getString(R.string.important_info_text_message);
+            String appUpdatedTextMessage = activity.getString(R.string.app_updated_text_message);
+            String currentVersionName = activity.getCurrentAppVersionNameInternal(); // Background safe version
+            String lastRunVersionName = activity.sharedPreferences.getString(PREF_LAST_RUN_VERSION_NAME, NO_VERSION_SAVED);
+
+            Log.d(TAG_VERSION_CHECK, "Background Check - Current Version: " + currentVersionName + ", Last Run Version: " + lastRunVersionName);
+
+            String title = null;
+            String message = null;
+
+            if (NO_VERSION_SAVED.equals(lastRunVersionName)) {
+                title = "Welcome!";
+                message = "Welcome to Video Compressor \nWelcome to version " + currentVersionName + "\n" + importantInfoTextMessage;
+            } else if (!currentVersionName.equals(lastRunVersionName)) {
+                title = "App Updated!";
+                message = "Welcome to Video Compressor \nYou've updated to version " + currentVersionName + "\n" + appUpdatedTextMessage;
+            } else {
+                Log.d(TAG_VERSION_CHECK, "App version is the same as the last run.");
+            }
+
+            // Always prepare to save the current version, even if no dialog is shown immediately
+            // The actual save will happen on the main thread after any dialog.
+            if (title != null && message != null) {
+                return new VersionCheckResult(title, message, currentVersionName);
+            } else {
+                // No dialog needed, but still need to save the current version if it changed
+                // or if it's the first run (to mark it as no longer NO_VERSION_SAVED)
+                if (!currentVersionName.equals(lastRunVersionName) || NO_VERSION_SAVED.equals(lastRunVersionName)) {
+                    // We create a result just to pass the version to save, even if no dialog.
+                    // Or, you could save it directly here IF `apply()` is truly non-blocking for your StrictMode.
+                    // To be safe, we'll pass it to onPostExecute.
+                    return new VersionCheckResult(null, null, currentVersionName);
+                }
+                return null; // No dialog, and version is the same as last run.
+            }
+        }
+
+        @Override
+        protected void onPostExecute(VersionCheckResult result) {
+            MainActivity activity = activityReference.get();
+            if (activity == null || activity.isFinishing()) {
+                return; // Activity is gone
+            }
+
+            if (result != null) {
+                // Show dialog if title and message are present
+                if (result.dialogTitle != null && result.dialogMessage != null) {
+                    activity.showVersionAlertDialogInternal(result.dialogTitle, result.dialogMessage);
+                }
+
+                // Save the current version name now on the main thread (apply() is async)
+                // This happens after any dialog is shown (or if no dialog was needed but version changed/was first run)
+                if (result.currentVersionToSave != null) {
+                    Log.d(TAG_VERSION_CHECK, "Saving current version to SharedPreferences: " + result.currentVersionToSave);
+                    activity.sharedPreferences.edit().putString(PREF_LAST_RUN_VERSION_NAME, result.currentVersionToSave).apply();
+                }
+            }
+        }
+    }
+
+    // This method is now safe to call from the background task to get version name
+    // as it doesn't directly interact with UI elements for this specific task.
+    // It's effectively a utility method for the AsyncTask.
+    private String getCurrentAppVersionNameInternal() {
+        try {
+            // This is generally safe as string resources are cached.
+            return getString(R.string.dynamic_version_name);
+        } catch (Exception e) {
+            Log.e(TAG_VERSION_CHECK, "Could not get version name from resources. Falling back.", e);
+            try {
+                // This part (PackageManager) is slow and was a StrictMode violation.
+                // It's now called within doInBackground.
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (PackageManager.NameNotFoundException pmEx) {
+                Log.e(TAG_VERSION_CHECK, "Could not get version name from PackageManager either.", pmEx);
+                return "Unknown";
+            }
+        }
+    }
+    // Renamed to avoid confusion, this is called from onPostExecute (Main Thread)
+    private void showVersionAlertDialogInternal(String title, String message) {
+        if (isFinishing() || isDestroyed()) { // Check if activity is still valid
+            return;
+        }
+        Log.d(TAG_VERSION_CHECK, "Showing dialog: " + title);
+        ContextThemeWrapper themedContext = new ContextThemeWrapper(this, R.style.AppAlertDialogStyle);
+        new AlertDialog.Builder(themedContext)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .setCancelable(true)
+                .show();
+    }
+    final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+
     private void convert() {
+        if (mMainViewModel.getLoadedFile() == null) {
+            Toast.makeText(this, R.string.please_select_video, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        MainViewModel.LoadUriResult loadedVideoInfo = mMainViewModel.getLoadUriResultLiveData().getValue();
+        if (loadedVideoInfo == null || loadedVideoInfo.file == null) {
+            Toast.makeText(this, R.string.video_not_fully_loaded, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 1. Get Original Filename (without extension)
+        String originalFileNameWithExt = loadedVideoInfo.originalFileName;
+        if (originalFileNameWithExt == null || originalFileNameWithExt.isEmpty()) {
+            // Fallback if originalFileName is somehow not set
+            originalFileNameWithExt = "video_" + dateFormat.format(new Date()); // Or some other default
+        }
+
+        String originalFileNameWithoutExt = originalFileNameWithExt;
+        int lastDot = originalFileNameWithExt.lastIndexOf('.');
+        if (lastDot > 0 && lastDot < originalFileNameWithExt.length() - 1) { // Check if '.' is not the first or last char
+            originalFileNameWithoutExt = originalFileNameWithExt.substring(0, lastDot);
+        }
+        // Sanitize the original filename part to remove characters invalid for filenames
+        // originalFileNameWithoutExt = originalFileNameWithoutExt.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+
+        // 2. Get Video Width
+        int videoWidth = mConversionParameters.mVideoResolution; // Assuming 'width' is available and populated
+
+        // 3. Construct the new filename
+        // Format: original_filename_width_PREFIX.mp4
+        // Example: my_cool_video_1280_VID_CONVERTED_.mp4
+        // You might want to add a timestamp back if original_filename + width could be repeated.
+        // For example, if a user converts the same video at the same width multiple times.
+        // String timestampForUniqueness = dateFormat.format(new Date());
+        // final String fileName = originalFileNameWithoutExt + "_" + videoWidth + "p_" +
+        //                         Converter.CONVERTED_VIDEO_PREFIX + "_" + timestampForUniqueness + ".mp4";
+
+        // Let's refine the prefix usage for clarity.
+        // If CONVERTED_VIDEO_PREFIX is "VID_CONVERTED_", then:
+        // myvideo_1280_VID_CONVERTED_.mp4 (if prefix ends with _)
+        // myvideo_1280_VID_CONVERTED.mp4 (if prefix doesn't end with _)
+        // It's usually good to have separators.
+        final String fileName = originalFileNameWithoutExt + "_" +
+                videoWidth + "p" + // Added "p" for pixels, e.g., "1280p"
+                Converter.CONVERTED_VIDEO_PREFIX + // Assuming this ends with an underscore or is clear
+                ".mp4";
+        outputFilenameTextView.setText("Output: " + fileName);
+
+        Log.i(TAG, "Generated output filename: " + fileName);
+
         if (mConverter.isConverting()) {
             Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             return;
@@ -497,8 +782,6 @@ public class MainActivity extends AppCompatActivity {
         if (timeTo == mTimelineRangeBar.getDuration()) {
             timeTo = 0;
         }
-        final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-        final String fileName = Converter.CONVERTED_VIDEO_PREFIX + dateFormat.format(new Date()) + ".mp4";
 
         mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), fileName, timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
                 mConversionParameters.mVideoBitrate, mConversionParameters.mAudioBitrate);
@@ -517,6 +800,7 @@ public class MainActivity extends AppCompatActivity {
             mConverter.reset();
             updateControls();
             initInputData(result);
+            onInputDataLoadedAndUiReady();
         } else {
             Toast.makeText(getBaseContext(), R.string.bad_video, Toast.LENGTH_SHORT).show();
             pickVideo();

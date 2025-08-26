@@ -16,11 +16,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
+import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.collection.LruCache;
 import androidx.core.content.ContextCompat;
@@ -40,6 +43,7 @@ import com.squareup.picasso.RequestHandler;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -49,7 +53,7 @@ import okhttp3.Response;
 
 public class LibraryActivity extends AppCompatActivity {
 
-    private static final String TAG = "LibraryActivity";
+    private static final String TAG = "USER_LibraryActivity";
 
     private LibraryAdapter mAdapter;
     private LibraryViewModel mViewModel;
@@ -146,6 +150,17 @@ public class LibraryActivity extends AppCompatActivity {
 
             @Override
             public boolean onActionItemClicked(androidx.appcompat.view.ActionMode mode, MenuItem item) {
+                int itemId = item.getItemId();
+                if (itemId == R.id.id_delete_selected) { // Assuming your delete item ID is action_delete_selected
+                    // Show confirmation dialog before deleting
+                    showDeleteConfirmationDialog();
+                    // mode.finish() will be called after deletion or cancellation in the dialog
+                    return true;
+                } else if (itemId == R.id.id_share_selected) { // Assuming your share item ID is action_share_selected
+                    shareSelectedFiles();
+                    mode.finish(); // Finish action mode after share
+                    return true;
+                }
                 return false;
             }
 
@@ -166,7 +181,100 @@ public class LibraryActivity extends AppCompatActivity {
 
             }
         });
-        Objects.requireNonNull(mActionMode).setTitle(String.valueOf(mSelectedFiles.size()));
+        if (mActionMode != null) { // Check because startSupportActionMode can return null
+            mActionMode.setTitle(String.valueOf(mSelectedFiles.size()));
+        }
+    }
+
+    private void showDeleteConfirmationDialog() {
+        if (mSelectedFiles.isEmpty()) { // Should not happen if CAM is active, but good check
+            return;
+        }
+        // 1. Create a ContextThemeWrapper with custom dialog style
+        ContextThemeWrapper themedContext = new ContextThemeWrapper(this, R.style.AppAlertDialogStyle);
+        new AlertDialog.Builder(themedContext)
+                .setTitle("Confirm Deletion")
+                .setMessage("Are you sure you want to delete " + mSelectedFiles.size() + " selected video(s) from your device? File(s) will be permanently deleted and this action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    // User clicked "Delete"
+                    deleteSelectedFilesInternal(); // Call the actual deletion logic
+                    if (mActionMode != null) {
+                        mActionMode.finish(); // Finish action mode after deletion
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    // User clicked "Cancel"
+                    // Do nothing, or optionally finish CAM if desired:
+                    // if (mActionMode != null) {
+                    //     mActionMode.finish(); // Optionally finish CAM on cancel
+                    // }
+                    dialog.dismiss();
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert) // Optional: add an icon
+                .show();
+    }
+
+    private void deleteSelectedFilesInternal() {
+        if (mSelectedFiles.isEmpty()) {
+            return;
+        }
+        // Make a copy to avoid ConcurrentModificationException if mViewModel.deleteFile modifies the source list
+        // that mSelectedFiles might be referencing indirectly (though unlikely with HashSet<File>)
+        new ArrayList<>(mSelectedFiles).forEach(file -> {
+            if (mViewModel != null) { // Ensure mViewModel is initialized
+                mViewModel.deleteFile(file);
+            } else {
+                Log.e(TAG, "ViewModel not initialized, cannot delete file: " + file.getName());
+            }
+        });
+        Toast.makeText(this, mSelectedFiles.size() + " item(s) deleted", Toast.LENGTH_SHORT).show();
+        // mSelectedFiles will be cleared in onDestroyActionMode
+        // The LiveData observer for mViewModel.getFiles() should update the RecyclerView
+    }
+
+    private void shareSelectedFiles() {
+        if (mSelectedFiles.isEmpty()) {
+            return;
+        }
+
+        ArrayList<Uri> urisToShare = new ArrayList<>();
+        for (File file : mSelectedFiles) {
+            // MUST use FileProvider to get a content URI for sharing
+            // MainActivity.FILE_PROVIDER_AUTHORITY should be accessible here, or define it in LibraryActivity
+            // Ensure this authority matches AndroidManifest.xml
+            try {
+                Uri uri = FileProvider.getUriForFile(this, MainActivity.FILE_PROVIDER_AUTHORITY, file);
+                urisToShare.add(uri);
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "Error creating URI for file: " + file.getAbsolutePath() + ". Is FileProvider configured correctly?", e);
+                Toast.makeText(this, "Error sharing " + file.getName(), Toast.LENGTH_SHORT).show();
+                // Optionally skip this file or stop the share operation
+            }
+        }
+
+        if (urisToShare.isEmpty()) {
+            Toast.makeText(this, "No files could be prepared for sharing.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent shareIntent = new Intent();
+        if (urisToShare.size() == 1) {
+            shareIntent.setAction(Intent.ACTION_SEND);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, urisToShare.get(0));
+            shareIntent.setType("video/*"); // Or use a more generic "*/*" if files can be other types
+        } else {
+            shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+            shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare);
+            shareIntent.setType("video/*"); // Or use a more generic "*/*"
+        }
+
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        try {
+            startActivity(Intent.createChooser(shareIntent, "Share " + urisToShare.size() + " video(s) via"));
+        } catch (android.content.ActivityNotFoundException ex) {
+            Toast.makeText(this, "No app can handle this share action.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private static class VideoViewHolder extends RecyclerView.ViewHolder {
@@ -175,6 +283,7 @@ public class LibraryActivity extends AppCompatActivity {
         final ImageView thumbnailView;
         final TextView durationView;
         final ImageView selectionView;
+        final TextView fileNameTextView;
 
         VideoViewHolder(@NonNull final View itemView) {
             super(itemView);
@@ -182,6 +291,7 @@ public class LibraryActivity extends AppCompatActivity {
             thumbnailView = itemView.findViewById(R.id.thumbnail);
             durationView = itemView.findViewById(R.id.duration);
             selectionView = itemView.findViewById(R.id.selection);
+            fileNameTextView = itemView.findViewById(R.id.filename);
         }
     }
 
@@ -218,6 +328,9 @@ public class LibraryActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
             final File file = differ.getCurrentList().get(position);
+            if (holder.fileNameTextView != null) {
+                holder.fileNameTextView.setText(file.getName());
+            }
             holder.contentView.setOnClickListener(v -> onItemClicked(holder, file));
             holder.contentView.setOnLongClickListener(v -> {
                 onItemLongClicked(holder, file);
@@ -244,9 +357,13 @@ public class LibraryActivity extends AppCompatActivity {
             final int size = getResources().getDimensionPixelSize(R.dimen.library_item_grid_size);
             final Uri uri = Uri.fromFile(file);
             holder.durationView.setText("");
+            // Define your desired corner radius in dp
+            float cornerRadiusDp = 16f; // For example, 8dp. Adjust as you like.
+
             Picasso.get().load(uri)
                     .resize(size, size)
                     .centerCrop()
+                    .transform(new RoundedCornersTransformation(cornerRadiusDp))
                     .into(holder.thumbnailView, new Callback() {
                         @Override
                         public void onSuccess() {
@@ -261,6 +378,7 @@ public class LibraryActivity extends AppCompatActivity {
                         @Override
                         public void onError(Exception e) {
                             holder.durationView.setText("");
+                            holder.fileNameTextView.setText("");
                         }
                     });
         }
@@ -285,8 +403,8 @@ public class LibraryActivity extends AppCompatActivity {
                         final Intent intent = new Intent(Intent.ACTION_SEND);
                         intent.setType("video/*");
                         intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getBaseContext(), MainActivity.FILE_PROVIDER_AUTHORITY, file));
-                        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(intent);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(Intent.createChooser(intent, "Share video using"));
                     } else if (itemId == R.id.id_delete) {
                         mViewModel.deleteFile(file);
                     }
@@ -361,7 +479,12 @@ public class LibraryActivity extends AppCompatActivity {
             } catch (Exception ignore) {
             }
 
-            mediaMetadataRetriever.release();
+            try {
+                mediaMetadataRetriever.release();
+            } catch (
+                    IOException e) {
+                Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+    }
             return bitmap == null ? null : new Result(bitmap, Picasso.LoadedFrom.DISK);
         }
     }
