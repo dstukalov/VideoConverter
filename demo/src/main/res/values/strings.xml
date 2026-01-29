@@ -29,7 +29,4 @@
     <string name="quality_1080p">1080p</string>
     <string name="quality_1080p_h265">1080p, h265</string>
     <string name="video_preview">Video preview</string>
-    <string name="converted_videos">Converted videos</string>
-    <string name="no_converted_videos">No converted videos</string>
-    <string name="delete">Delete</string>
 </resources>

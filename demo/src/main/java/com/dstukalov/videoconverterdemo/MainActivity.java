@@ -12,8 +12,6 @@ import android.provider.MediaStore;
 import android.text.format.DateUtils;
 import android.text.format.Formatter;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
@@ -250,23 +248,6 @@ public class MainActivity extends AppCompatActivity {
             mFramePreview.interrupt();
             mFramePreview = null;
         }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.id_library: {
-                startActivity(new Intent(this, LibraryActivity.class));
-                return true;
-            }
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     private void onOutputOptions() {
@@ -530,7 +511,7 @@ public class MainActivity extends AppCompatActivity {
         final int mVideoBitrate;
         final int mAudioBitrate;
 
-        public static final Parcelable.Creator<ConversionParameters> CREATOR = new Parcelable.Creator<ConversionParameters>() {
+        public static final Parcelable.Creator<ConversionParameters> CREATOR = new Parcelable.Creator<>() {
             public ConversionParameters createFromParcel(Parcel in) {
                 return new ConversionParameters(in);
             }
