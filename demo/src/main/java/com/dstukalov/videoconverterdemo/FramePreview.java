@@ -7,6 +7,7 @@ import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FramePreview extends Thread {
@@ -74,6 +75,10 @@ public class FramePreview extends Thread {
             //allow thread to exit
         }
         mRunning.set(false);
-        mediaMetadataRetriever.release();
+        try {
+            mediaMetadataRetriever.release();
+        } catch (IOException ex) {
+            Log.e(TAG, "failed to release MediaMetadataRetriever", ex);
+        }
     }
 }

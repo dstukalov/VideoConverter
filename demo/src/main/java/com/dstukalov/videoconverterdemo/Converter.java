@@ -162,7 +162,11 @@ public class Converter {
             } catch (Exception e) {
                 Log.w(TAG, "Unable get media meta", e);
             }
-            mmr.release();
+            try {
+                mmr.release();
+            } catch (IOException e) {
+                Log.w(TAG, "Unable release MediaMetadataRetriever", e);
+            }
         }
 
         Result(@NonNull Exception exception) {
