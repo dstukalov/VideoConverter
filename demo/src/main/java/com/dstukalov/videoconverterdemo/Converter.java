@@ -47,7 +47,7 @@ public class Converter {
         return INSTANCE;
     }
 
-    public Converter(@NonNull Application application) {
+    private Converter(@NonNull Application application) {
         this.application = application;
     }
 

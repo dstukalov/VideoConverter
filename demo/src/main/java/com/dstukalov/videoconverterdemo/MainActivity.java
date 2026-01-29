@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate");
 
         setContentView(R.layout.main);
+        setSupportActionBar(findViewById(R.id.toolbar));
 
         mConverter = Converter.getInstance(getApplication());
 
