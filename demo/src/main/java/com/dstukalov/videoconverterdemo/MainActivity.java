@@ -479,10 +479,8 @@ public class MainActivity extends AppCompatActivity {
         if (timeTo == mTimelineRangeBar.getDuration()) {
             timeTo = 0;
         }
-        final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-        final String fileName = Converter.CONVERTED_VIDEO_PREFIX + dateFormat.format(new Date()) + ".mp4";
 
-        mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), fileName, timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
+        mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), "converted.mp4", timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
                 mConversionParameters.mVideoBitrate, mConversionParameters.mAudioBitrate);
     }
 
