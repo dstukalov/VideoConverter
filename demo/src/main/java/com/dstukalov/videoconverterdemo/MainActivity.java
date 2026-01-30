@@ -235,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
                             DateUtils.formatElapsedTime(result.duration / 1000),
                             Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
 
-                    mElapsedTimeView.setText(getString(R.string.seconds_elapsed, result.elapsedTime / 1000));
+                    mElapsedTimeView.setText(getString(R.string.seconds_elapsed_f, result.elapsedTime / 1000f));
                 } else if (result.exception != null) {
                     Toast.makeText(getBaseContext(), R.string.conversion_failed, Toast.LENGTH_LONG).show();
                     mElapsedTimeView.setText("");

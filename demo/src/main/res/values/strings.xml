@@ -21,6 +21,7 @@
     <string name="video_info_output">%1$dx%2$d, %3$s, ~%4$s</string>
     <string name="conversion_failed">Failed to convert</string>
     <string name="seconds_elapsed">%d sec. elapsed</string>
+    <string name="seconds_elapsed_f">%.02f sec. elapsed</string>
     <string name="quality_240p">240p</string>
     <string name="quality_360p">360p</string>
     <string name="quality_480p">480p</string>
