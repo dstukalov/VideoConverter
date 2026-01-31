@@ -1,4 +1,4 @@
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dstukalov/videoconverter)
+[![Maven Central](https://maven-badges.sml.io/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.sml.io/maven-central/com.dstukalov/videoconverter)
 [![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f4904c4356fd432c8e9edd85a5468c5c)](https://app.codacy.com/app/dstukalov/VideoConverter?utm_source=github.com&utm_medium=referral&utm_content=dstukalov/VideoConverter&utm_campaign=Badge_Grade_Dashboard)
 
@@ -9,7 +9,7 @@ Video file conversion library based on <a href="https://android.googlesource.com
 VideoConverter is installed by adding the following dependency to your `app/build.gradle` file:
 ```groovy
 dependencies {
-    implementation 'com.dstukalov:videoconverter:1.10'
+    implementation 'com.dstukalov.videoconverter:videoconverter:1.11'
 }
 ```
 You may also need to add the following to your `project/build.gradle` file:
