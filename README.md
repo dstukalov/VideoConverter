@@ -1,4 +1,4 @@
-[![Maven Central](https://maven-badges.sml.io/maven-central/com.dstukalov/videoconverter/badge.svg)](https://maven-badges.sml.io/maven-central/com.dstukalov/videoconverter)
+[![Maven Central](https://maven-badges.sml.io/maven-central/com.dstukalov.videoconverter/videoconverter/badge.svg)](https://maven-badges.sml.io/maven-central/com.dstukalov.videoconverter/videoconverter)
 [![GitHub license](https://img.shields.io/badge/license-Apache%202-brightgreen.svg)](https://raw.githubusercontent.com/dstukalov/VideoConverter/master/LICENSE)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/f4904c4356fd432c8e9edd85a5468c5c)](https://app.codacy.com/app/dstukalov/VideoConverter?utm_source=github.com&utm_medium=referral&utm_content=dstukalov/VideoConverter&utm_campaign=Badge_Grade_Dashboard)
 
