@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Parcel;
@@ -13,11 +14,15 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.view.ViewCompat;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TimelineRangeBar extends View {
 
@@ -50,6 +55,8 @@ public class TimelineRangeBar extends View {
     private float mLastX;
 
     private Callback mCallback;
+
+    private final List<Rect> mExclusionRects = new ArrayList<>();
 
     public interface Callback {
         void onRangeChanged(long position, long timeFrom, long timeTo, @MotionEdge int motionEdge);
@@ -151,11 +158,25 @@ public class TimelineRangeBar extends View {
         mPositionPaint.setStrokeCap(Paint.Cap.ROUND);
 
         mTouchTarget = 16f * density;
+
+        mExclusionRects.add(new Rect(0, 0, 0, 0));
+        mExclusionRects.add(new Rect(0, 0, 0, 0));
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
+
+        if (Build.VERSION.SDK_INT >= 29) {
+            final Rect leftExclusionRect = mExclusionRects.get(0);
+            leftExclusionRect.bottom = getHeight();
+            leftExclusionRect.right = getHeight();
+            final Rect rightExclusionRect = mExclusionRects.get(1);
+            rightExclusionRect.bottom = getHeight();
+            rightExclusionRect.right = getWidth();
+            rightExclusionRect.left = getWidth() - getHeight();
+            ViewCompat.setSystemGestureExclusionRects(this, mExclusionRects);
+        }
 
         final RectF rect = getDrawRect();
 
