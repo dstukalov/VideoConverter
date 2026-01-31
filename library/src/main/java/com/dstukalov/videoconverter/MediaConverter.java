@@ -60,6 +60,7 @@ public class MediaConverter {
     private long mTimeTo;
     private int mVideoResolution;
     private int mVideoBitrate = 2000000; // 2Mbps
+    private int mVideoBitrateMode = -1; // see MediaCodecInfo.EncoderCapabilities
     private @VideoCodec String mVideoCodec = VIDEO_CODEC_H264;
     private int mAudioBitrate = 128000; // 128Kbps
 
@@ -134,6 +135,11 @@ public class MediaConverter {
     }
 
     @SuppressWarnings("unused")
+    public void setVideoBitrateMode(final int videoBitrateMode) {
+        mVideoBitrateMode = videoBitrateMode;
+    }
+
+    @SuppressWarnings("unused")
     public void setAudioBitrate(final int audioBitrate) {
         mAudioBitrate = audioBitrate;
     }
@@ -156,7 +162,7 @@ public class MediaConverter {
         AudioTrackConverter audioTrackConverter = null;
 
         try {
-            videoTrackConverter = VideoTrackConverter.create(mInput, mTimeFrom, mTimeTo, mVideoResolution, mVideoBitrate, mVideoCodec);
+            videoTrackConverter = VideoTrackConverter.create(mInput, mTimeFrom, mTimeTo, mVideoResolution, mVideoBitrate, mVideoBitrateMode, mVideoCodec);
             audioTrackConverter = AudioTrackConverter.create(mInput, mTimeFrom, mTimeTo, mAudioBitrate);
 
             if (videoTrackConverter == null && audioTrackConverter == null) {

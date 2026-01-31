@@ -1,6 +1,7 @@
 package com.dstukalov.videoconverterdemo;
 
 import android.app.Application;
+import android.media.MediaCodecInfo;
 import android.media.MediaMetadataRetriever;
 import android.util.Log;
 
@@ -69,6 +70,7 @@ public class Converter {
                     return;
                 }
                 converter.setVideoBitrate(videoBitrate);
+                converter.setVideoBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR); // this allows to override minimum quality floor for video; see https://developer.android.com/reference/android/media/MediaCodec#qualityFloor
                 converter.setAudioBitrate(audioBitrate);
 
                 final long startTime = System.currentTimeMillis();

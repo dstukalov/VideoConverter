@@ -4,6 +4,7 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.os.Build;
 import android.util.Log;
 import android.view.Surface;
 
@@ -68,6 +69,7 @@ class VideoTrackConverter {
             final long timeTo,
             final int videoResolution,
             final int videoBitrate,
+            final int videoBitrateMode,
             final @NonNull String videoCodec) throws IOException {
 
         final MediaExtractor videoExtractor = input.createExtractor();
@@ -76,7 +78,7 @@ class VideoTrackConverter {
             videoExtractor.release();
             return null;
         }
-        return new VideoTrackConverter(videoExtractor, videoInputTrack, timeFrom, timeTo, videoResolution, videoBitrate, videoCodec);
+        return new VideoTrackConverter(videoExtractor, videoInputTrack, timeFrom, timeTo, videoResolution, videoBitrate, videoBitrateMode, videoCodec);
     }
 
     private VideoTrackConverter(
@@ -86,6 +88,7 @@ class VideoTrackConverter {
             final long timeTo,
             final int videoResolution,
             final int videoBitrate,
+            final int videoBitrateMode,
             final @NonNull String videoCodec) throws IOException {
 
         mTimeFrom = timeFrom;
@@ -138,6 +141,9 @@ class VideoTrackConverter {
         // configure() call to throw an unhelpful exception.
         outputVideoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         outputVideoFormat.setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate);
+        if (Build.VERSION.SDK_INT >= 21 && videoBitrateMode >= 0) {
+            outputVideoFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, videoBitrateMode);
+        }
         outputVideoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, OUTPUT_VIDEO_FRAME_RATE);
         outputVideoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, OUTPUT_VIDEO_IFRAME_INTERVAL);
         if (VERBOSE) Log.d(TAG, "video format: " + outputVideoFormat);
