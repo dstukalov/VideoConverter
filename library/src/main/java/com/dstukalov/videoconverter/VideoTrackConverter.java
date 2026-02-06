@@ -5,6 +5,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.Surface;
 
@@ -476,6 +477,22 @@ class VideoTrackConverter {
             final @NonNull MediaFormat inputFormat,
             final @NonNull Surface surface) throws IOException {
         final MediaCodec decoder = MediaCodec.createDecoderByType(MediaConverter.getMimeTypeFor(inputFormat));
+
+        if (Build.VERSION.SDK_INT >= 31) {
+            final String VENDOR_DOLBY_CODEC_TRANSFER_PARAMKEY = "vendor.dolby.codec.transfer.value";
+            final MediaCodec.ParameterDescriptor descriptor = decoder.getParameterDescriptor(VENDOR_DOLBY_CODEC_TRANSFER_PARAMKEY);
+            if (descriptor != null) {
+                final Bundle transferBundle = new Bundle();
+                transferBundle.putString(VENDOR_DOLBY_CODEC_TRANSFER_PARAMKEY, "transfer.sdr.normal");
+                decoder.setParameters(transferBundle);
+            } else {
+                inputFormat.setInteger(MediaFormat.KEY_COLOR_TRANSFER_REQUEST, MediaFormat.COLOR_TRANSFER_SDR_VIDEO);
+            }
+        } else {
+            //The Dolby Vision decoder doesn't support transfer parameter
+            //In this case the decoded video buffer is HLG and in-app tone mapping has to be used instead
+        }
+
         decoder.configure(inputFormat, surface, null, 0);
         decoder.start();
         return decoder;
