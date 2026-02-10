@@ -21,7 +21,7 @@ public class VideoThumbnailsExtractor {
 
     private static final String TAG = "video-thumbnails";
 
-    interface Callback {
+    public interface Callback {
         boolean publishProgress(int index, Bitmap thumbnail);
     }
 

@@ -1,6 +1,5 @@
 package com.dstukalov.videoconverterdemo;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -12,12 +11,12 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 public class VideoThumbnailsView extends View {
 
@@ -44,7 +43,6 @@ public class VideoThumbnailsView extends View {
         super(context, attrs, defStyleAttr);
     }
 
-    @TargetApi(21)
     public VideoThumbnailsView(final Context context, final @Nullable AttributeSet attrs, final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
@@ -71,7 +69,7 @@ public class VideoThumbnailsView extends View {
    }
 
     @Override
-    protected void onDraw(final Canvas canvas) {
+    protected void onDraw(@NonNull final Canvas canvas) {
         super.onDraw(canvas);
 
         if (mVideoFilePath == null) {
