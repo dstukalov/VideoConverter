@@ -2,7 +2,8 @@ package com.dstukalov.videoconverterdemo;
 
 import android.app.Application;
 import android.content.ContentResolver;
-import android.media.MediaMetadataRetriever;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -47,6 +48,7 @@ public class MainViewModel extends AndroidViewModel {
         int height;
         long duration;
         long fileLength;
+        String mime;
 
         public static final Parcelable.Creator<LoadUriResult> CREATOR = new Parcelable.Creator<LoadUriResult>() {
             public LoadUriResult createFromParcel(Parcel in) {
@@ -59,7 +61,7 @@ public class MainViewModel extends AndroidViewModel {
         };
 
         boolean isOk() {
-            return file != null && width > 0 && height > 0 && duration > 0 && fileLength > 0;
+            return file != null && width > 0 && height > 0 && duration > 0 && fileLength > 0 && mime != null;
         }
 
         LoadUriResult() {
@@ -71,6 +73,7 @@ public class MainViewModel extends AndroidViewModel {
             height = in.readInt();
             duration = in.readLong();
             fileLength = in.readLong();
+            mime = in.readString();
         }
 
         @Override
@@ -85,6 +88,7 @@ public class MainViewModel extends AndroidViewModel {
             dest.writeInt(height);
             dest.writeLong(duration);
             dest.writeLong(fileLength);
+            dest.writeString(mime);
         }
     }
 
@@ -169,19 +173,29 @@ public class MainViewModel extends AndroidViewModel {
             }
         }
         if (result.file != null) {
-            final MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            final MediaExtractor extractor = new MediaExtractor();
             try {
-                mmr.setDataSource(result.file.getAbsolutePath());
-            } catch (Exception e) {
+                extractor.setDataSource(result.file.getAbsolutePath());
+            } catch (IOException e) {
                 Log.w(TAG, "Unable get media meta", e);
                 result.file = null;
             }
             if (result.file != null) {
-                try {
-                    result.width = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
-                    result.height = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
-                    result.duration = Long.parseLong(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
-                    int rotation = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)));
+                MediaFormat mediaFormat = null;
+                for (int index = 0; index < extractor.getTrackCount(); ++index) {
+                    String mime = extractor.getTrackFormat(index).getString(MediaFormat.KEY_MIME);
+                    if (mime != null && mime.startsWith("video/")) {
+                        extractor.selectTrack(index);
+                        mediaFormat = extractor.getTrackFormat(index);
+                        break;
+                    }
+                }
+                if (mediaFormat != null) {
+                    final int rotation = mediaFormat.containsKey(MediaFormat.KEY_ROTATION) ? mediaFormat.getInteger(MediaFormat.KEY_ROTATION) : 0;
+                    result.width = mediaFormat.getInteger(MediaFormat.KEY_WIDTH);
+                    result.height = mediaFormat.getInteger(MediaFormat.KEY_HEIGHT);
+                    result.duration = mediaFormat.getLong(MediaFormat.KEY_DURATION) / 1000L;
+                    result.mime = mediaFormat.getString(MediaFormat.KEY_MIME);
                     if (rotation % 180 == 90) {
                         int tmp = result.width;
                         //noinspection SuspiciousNameCombination
@@ -189,18 +203,11 @@ public class MainViewModel extends AndroidViewModel {
                         result.height = tmp;
                     }
                     result.fileLength = result.file.length();
-                } catch (NumberFormatException | NullPointerException e) {
-                    Log.w(TAG, "Unable extract media meta", e);
-                    result.file = null;
                 }
             }
-            try {
-                mmr.release();
-            } catch (IOException e) {
-                Log.w(TAG, "Unable release MediaMetadataRetriever", e);
-            }
+            extractor.release();
         }
-        Log.i(TAG, "result " + result.file + " " + result.width + "x" + result.height + " " + result.duration + "ms");
+        Log.i(TAG, "result " + result.file + " " + result.mime + " " + result.width + "x" + result.height + " " + result.duration + "ms");
         return result;
     }
 }

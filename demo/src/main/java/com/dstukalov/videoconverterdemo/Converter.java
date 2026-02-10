@@ -1,8 +1,8 @@
 package com.dstukalov.videoconverterdemo;
 
 import android.app.Application;
-import android.media.MediaCodecInfo;
-import android.media.MediaMetadataRetriever;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
@@ -51,8 +51,7 @@ public class Converter {
     }
 
     @MainThread
-    public void convert(@NonNull File input, @NonNull String outputFileName, long timeFrom, long timeTo, int videoResolution,
-                        @NonNull @MediaConverter.VideoCodec String videoCodec, int videoBitrate, int audioBitrate) {
+    public void convert(@NonNull File input, @NonNull String outputFileName, long timeFrom, long timeTo, @NonNull ConversionParameters conversionParameters) {
         result.setValue(null);
         progress.postValue(new Progress(0, 0));
         convertRunnableFuture = executor.submit(() -> {
@@ -62,16 +61,16 @@ public class Converter {
                 converter.setInput(input);
                 converter.setOutput(output);
                 converter.setTimeRange(timeFrom, timeTo);
-                converter.setVideoResolution(videoResolution);
+                converter.setVideoResolution(conversionParameters.mVideoResolution);
                 try {
-                    converter.setVideoCodec(videoCodec);
+                    converter.setVideoCodec(conversionParameters.mVideoCodec);
                 } catch (FileNotFoundException e) {
                     result.postValue(new Result(e));
                     return;
                 }
-                converter.setVideoBitrate(videoBitrate);
-                converter.setVideoBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR); // this allows to override minimum quality floor for video; see https://developer.android.com/reference/android/media/MediaCodec#qualityFloor
-                converter.setAudioBitrate(audioBitrate);
+                converter.setVideoBitrate(conversionParameters.mVideoBitrate);
+                converter.setVideoBitrateMode(conversionParameters.mVideoBitrateMode);
+                converter.setAudioBitrate(conversionParameters.mAudioBitrate);
 
                 final long startTime = System.currentTimeMillis();
                 converter.setListener(percent -> {
@@ -136,6 +135,7 @@ public class Converter {
         int height;
         long duration;
         long fileLength;
+        String mime;
         public long elapsedTime;
         @Nullable Exception exception;
 
@@ -146,26 +146,34 @@ public class Converter {
             this.file = file;
             this.elapsedTime = elapsedTime;
             this.fileLength = file.length();
-            final MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            final MediaExtractor extractor = new MediaExtractor();
             try {
-                mmr.setDataSource(file.getAbsolutePath());
-                width = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
-                height = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
-                duration = Long.parseLong(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
-                int rotation = Integer.parseInt(Objects.requireNonNull(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)));
+                extractor.setDataSource(file.getAbsolutePath());
+            } catch (IOException e) {
+                Log.w(TAG, "Unable get media meta", e);
+            }
+
+            MediaFormat mediaFormat = null;
+            for (int index = 0; index < extractor.getTrackCount(); ++index) {
+                String mime = extractor.getTrackFormat(index).getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("video/")) {
+                    extractor.selectTrack(index);
+                    mediaFormat = extractor.getTrackFormat(index);
+                    break;
+                }
+            }
+            if (mediaFormat != null) {
+                final int rotation = mediaFormat.containsKey(MediaFormat.KEY_ROTATION) ? mediaFormat.getInteger(MediaFormat.KEY_ROTATION) : 0;
+                width = mediaFormat.getInteger(MediaFormat.KEY_WIDTH);
+                height = mediaFormat.getInteger(MediaFormat.KEY_HEIGHT);
+                duration = mediaFormat.getLong(MediaFormat.KEY_DURATION) / 1000L;
+                mime = mediaFormat.getString(MediaFormat.KEY_MIME);
                 if (rotation % 180 == 90) {
                     int tmp = width;
                     //noinspection SuspiciousNameCombination
                     width = height;
                     height = tmp;
                 }
-            } catch (Exception e) {
-                Log.w(TAG, "Unable get media meta", e);
-            }
-            try {
-                mmr.release();
-            } catch (IOException e) {
-                Log.w(TAG, "Unable release MediaMetadataRetriever", e);
             }
         }
 

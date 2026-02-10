@@ -3,11 +3,9 @@ package com.dstukalov.videoconverterdemo;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.media.MediaCodecInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcel;
-import android.os.Parcelable;
-import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.text.format.DateUtils;
 import android.text.format.Formatter;
@@ -26,7 +24,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -36,12 +33,9 @@ import androidx.lifecycle.ViewModelProvider;
 import com.dstukalov.videoconverter.MediaConverter;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 import java.util.Objects;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OutputSettingsDialogFragment.OutputSettingsCallback {
 
     private static final String TAG = "video-converter";
 
@@ -65,16 +59,8 @@ public class MainActivity extends AppCompatActivity {
 
     private @Nullable FramePreview mFramePreview;
     private Converter mConverter;
-    private ConversionParameters mConversionParameters = CONV_PARAMS_360P;
+    private ConversionParameters mConversionParameters = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR, 192000);
     private MainViewModel mMainViewModel;
-
-    private static final ConversionParameters CONV_PARAMS_240P = new ConversionParameters(240, MediaConverter.VIDEO_CODEC_H264, 1333000, 64000);
-    private static final ConversionParameters CONV_PARAMS_360P = new ConversionParameters(360, MediaConverter.VIDEO_CODEC_H264, 2000000, 96000);
-    private static final ConversionParameters CONV_PARAMS_480P = new ConversionParameters(480, MediaConverter.VIDEO_CODEC_H264, 2666000, 128000);
-    private static final ConversionParameters CONV_PARAMS_720P = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H264,  4000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_720P_H265 = new ConversionParameters(720, MediaConverter.VIDEO_CODEC_H265,  2000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_1080P = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H264, 6000000, 192000);
-    private static final ConversionParameters CONV_PARAMS_1080P_H265 = new ConversionParameters(1080, MediaConverter.VIDEO_CODEC_H265,  3000000, 192000);
 
     private final ActivityResultLauncher<Intent> pickVideoLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -90,23 +76,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        if (BuildConfig.DEBUG) {
-            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-                    .detectAll()
-                    .penaltyDeathOnNetwork()
-                    .penaltyLog()
-                    .penaltyFlashScreen()
-                    .penaltyDeath()
-                    .build());
-
-            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-                    .detectAll()
-                    .penaltyLog()
-                    .build());
-        }
-
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+
+        mConversionParameters.load(this);
 
         setContentView(R.layout.main);
         setSupportActionBar(findViewById(R.id.toolbar));
@@ -192,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         mOutputOptionsButton = this.findViewById(R.id.output_options);
         mOutputOptionsButton.setOnClickListener(v -> {
             if (!mConverter.isConverting()) {
-                onOutputOptions();
+                onOutputSettings();
             } else {
                 Toast.makeText(getBaseContext(), R.string.conversion_in_progress, Toast.LENGTH_SHORT).show();
             }
@@ -232,6 +205,7 @@ public class MainActivity extends AppCompatActivity {
                     mOutputInfoView.setText(getString(R.string.video_info,
                             result.width,
                             result.height,
+                            getCodecName(result.mime),
                             DateUtils.formatElapsedTime(result.duration / 1000),
                             Formatter.formatShortFileSize(MainActivity.this, result.fileLength)));
 
@@ -265,51 +239,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void onOutputOptions() {
-        final PopupMenu popup = new PopupMenu(this, mOutputOptionsButton);
-        popup.getMenuInflater().inflate(R.menu.output_options, popup.getMenu());
-        if (MediaConverter.selectCodec(MediaConverter.VIDEO_CODEC_H265) == null) {
-            popup.getMenu().removeItem(R.id.quality_720p_h265);
-            popup.getMenu().removeItem(R.id.quality_1080p_h265);
-        }
-        if (CONV_PARAMS_240P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_240p).setChecked(true);
-        } else if (CONV_PARAMS_360P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_360p).setChecked(true);
-        } else if (CONV_PARAMS_480P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_480p).setChecked(true);
-        } else if (CONV_PARAMS_720P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_720p).setChecked(true);
-        } else if (CONV_PARAMS_720P_H265.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_720p_h265).setChecked(true);
-        } else if (CONV_PARAMS_1080P.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_1080p).setChecked(true);
-        } else if (CONV_PARAMS_1080P_H265.equals(mConversionParameters)) {
-            popup.getMenu().findItem(R.id.quality_1080p_h265).setChecked(true);
-        }
-        popup.setOnMenuItemClickListener(item -> {
-            final int itemId = item.getItemId();
-            if (itemId == R.id.quality_240p) {
-                mConversionParameters = CONV_PARAMS_240P;
-            } else if (itemId == R.id.quality_360p) {
-                mConversionParameters = CONV_PARAMS_360P;
-            } else if (itemId == R.id.quality_480p) {
-                mConversionParameters = CONV_PARAMS_480P;
-            } else if (itemId == R.id.quality_720p) {
-                mConversionParameters = CONV_PARAMS_720P;
-            } else if (itemId == R.id.quality_720p_h265) {
-                mConversionParameters = CONV_PARAMS_720P_H265;
-            } else if (itemId == R.id.quality_1080p) {
-                mConversionParameters = CONV_PARAMS_1080P;
-            } else if (itemId == R.id.quality_1080p_h265) {
-                mConversionParameters = CONV_PARAMS_1080P_H265;
-            }
-            Log.i(TAG, "onOutputOptions selected " + mConversionParameters);
-            estimateOutput();
-            return true;
-        });
-
-        popup.show();
+    private void onOutputSettings() {
+        OutputSettingsDialogFragment.newInstance(mConversionParameters, mTimelineRangeBar.getTimeTo() - mTimelineRangeBar.getTimeFrom()).show(getSupportFragmentManager(), "output_settings_dialog");
     }
 
     private void initInputData(@NonNull MainViewModel.LoadUriResult result) {
@@ -330,6 +261,7 @@ public class MainActivity extends AppCompatActivity {
 
         mInputInfoView.setText(getString(R.string.video_info,
                 result.width, result.height,
+                getCodecName(result.mime),
                 DateUtils.formatElapsedTime(result.duration / 1000),
                 Formatter.formatShortFileSize(this, result.fileLength)));
 
@@ -392,10 +324,14 @@ public class MainActivity extends AppCompatActivity {
                 dstWidth = loadUriResult.width * dstHeight / loadUriResult.height;
                 dstWidth = dstWidth & ~3;
             }
-            final long duration = (mTimelineRangeBar.getTimeTo() - mTimelineRangeBar.getTimeFrom()) / 1000;
-            final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8;
+            final long duration = mTimelineRangeBar.getTimeTo() - mTimelineRangeBar.getTimeFrom();
+            final long estimatedSize = (mConversionParameters.mVideoBitrate + mConversionParameters.mAudioBitrate) * duration / 8000;
 
-            mOutputInfoView.setText(getString(R.string.video_info_output, dstWidth, dstHeight, DateUtils.formatElapsedTime(duration), Formatter.formatShortFileSize(this, estimatedSize)));
+            mOutputInfoView.setText(getString(R.string.video_info_output,
+                    dstWidth, dstHeight,
+                    getCodecName(mConversionParameters.mVideoCodec),
+                    DateUtils.formatElapsedTime(duration / 1000),
+                    Formatter.formatShortFileSize(this, estimatedSize)));
         } else {
             mOutputInfoView.setText(null);
         }
@@ -494,8 +430,7 @@ public class MainActivity extends AppCompatActivity {
             timeTo = 0;
         }
 
-        mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), "converted.mp4", timeFrom, timeTo, mConversionParameters.mVideoResolution, mConversionParameters.mVideoCodec,
-                mConversionParameters.mVideoBitrate, mConversionParameters.mAudioBitrate);
+        mConverter.convert(Objects.requireNonNull(mMainViewModel.getLoadedFile()), "converted.mp4", timeFrom, timeTo, mConversionParameters);
     }
 
     private void loadUri(final @NonNull Uri uri) {
@@ -517,68 +452,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private static class ConversionParameters implements Parcelable  {
-
-        final int mVideoResolution;
-        final @MediaConverter.VideoCodec String mVideoCodec;
-        final int mVideoBitrate;
-        final int mAudioBitrate;
-
-        public static final Parcelable.Creator<ConversionParameters> CREATOR = new Parcelable.Creator<>() {
-            public ConversionParameters createFromParcel(Parcel in) {
-                return new ConversionParameters(in);
-            }
-
-            public ConversionParameters[] newArray(int size) {
-                return new ConversionParameters[size];
-            }
-        };
-
-        ConversionParameters(int videoResolution, @NonNull @MediaConverter.VideoCodec String videoCodec, int videoBitrate, int audioBitrate) {
-            mVideoResolution = videoResolution;
-            mVideoCodec = videoCodec;
-            mVideoBitrate = videoBitrate;
-            mAudioBitrate = audioBitrate;
+    private String getCodecName(String mime) {
+        if (MediaConverter.VIDEO_CODEC_H264.equals(mime)) {
+            return getString(R.string.h_264);
+        } else if (MediaConverter.VIDEO_CODEC_H265.equals(mime)) {
+            return getString(R.string.h_265);
         }
+        return "";
+    }
 
-        ConversionParameters(Parcel in) {
-            mVideoResolution = in.readInt();
-            mVideoCodec = in.readString();
-            mVideoBitrate = in.readInt();
-            mAudioBitrate = in.readInt();
-        }
-
-        @Override
-        public int describeContents() {
-            return 0;
-        }
-
-        @Override
-        public void writeToParcel(Parcel dest, int flags) {
-            dest.writeInt(mVideoResolution);
-            dest.writeString(mVideoCodec);
-            dest.writeInt(mVideoBitrate);
-            dest.writeInt(mAudioBitrate);
-        }
-
-
-
-        @Override
-        public @NonNull String toString() {
-            return mVideoResolution + "p " + mVideoCodec + " video:" + mVideoBitrate + "kbps audio:" + mAudioBitrate + "kbps";
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ConversionParameters that = (ConversionParameters) o;
-            return mVideoResolution == that.mVideoResolution && mVideoBitrate == that.mVideoBitrate && mAudioBitrate == that.mAudioBitrate && mVideoCodec.equals(that.mVideoCodec);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(mVideoResolution, mVideoCodec, mVideoBitrate, mAudioBitrate);
-        }
+    @Override
+    public void onOutputSettingsChange(@NonNull ConversionParameters conversionParameters) {
+        mConversionParameters = conversionParameters;
+        mConversionParameters.save(this);
+        estimateOutput();
     }
 }
