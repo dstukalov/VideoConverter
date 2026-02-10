@@ -232,9 +232,9 @@
                 android:id="@+id/current_time"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:paddingTop="4dp"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="6dp"
                 android:textColor="#aaaaaa"
                 android:textSize="12sp" />
         </LinearLayout>
